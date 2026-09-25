@@ -1,0 +1,10 @@
+target/
+.idea/
+*.iml
+.DS_Store
+.vscode/
+database/
+*.db
+*.sqlite
+*.sqlite3
+core-banking.db

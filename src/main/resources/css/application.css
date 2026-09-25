@@ -1,0 +1,100 @@
+.app-root {
+    -fx-background-color: #F4F7F9;
+    -fx-font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    -fx-font-size: 14px;
+    -fx-text-fill: #102A43;
+}
+
+.scroll-pane {
+    -fx-background-color: transparent;
+}
+.scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}
+
+.sidebar {
+    -fx-background-color: #062C3A;
+    -fx-padding: 26 18 22 18;
+}
+
+.brand-box { -fx-padding: 2 10 20 10; }
+.brand { -fx-text-fill: #FFC857; -fx-font-size: 18px; -fx-font-weight: bold; }
+.brand-subtitle { -fx-text-fill: #D9E2EC; -fx-font-size: 13px; -fx-opacity: 1; }
+.sidebar .separator { -fx-background-color: #073B4C; -fx-padding: 0; }
+.nav-list { -fx-padding: 18 0 0 0; }
+.nav-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #D9E2EC;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-padding: 12 14;
+    -fx-background-radius: 5;
+    -fx-cursor: hand;
+}
+.nav-button:hover { -fx-background-color: #073B4C; -fx-text-fill: #FFFFFF; }
+.nav-button:selected { -fx-background-color: #008C95; -fx-text-fill: #FFFFFF; -fx-font-weight: bold; -fx-border-color: #FFC857; -fx-border-width: 0 0 0 4; }
+.sidebar-footer { -fx-text-fill: #64748B; -fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 10; -fx-opacity: 1; }
+
+.topbar {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #D9E2EC;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 22 30;
+}
+.section-title { -fx-text-fill: #062C3A; -fx-font-size: 28px; -fx-font-weight: bold; }
+.section-hint { -fx-text-fill: #486581; -fx-font-size: 14px; -fx-opacity: 1; }
+.system-status { -fx-text-fill: #16825D; -fx-font-size: 13px; -fx-font-weight: bold; }
+
+.page { -fx-padding: 28 30 30 30; }
+.panel { -fx-background-color: #FFFFFF; -fx-border-color: #D9E2EC; -fx-border-radius: 5; -fx-background-radius: 5; -fx-padding: 20; -fx-effect: none; }
+.panel-title { -fx-text-fill: #062C3A; -fx-font-size: 19px; -fx-font-weight: bold; }
+.quick-actions { -fx-background-color: #FFFFFF; -fx-border-color: #D9E2EC; -fx-border-radius: 5; -fx-background-radius: 5; -fx-padding: 16; -fx-alignment: center-left; }
+.stat-row { -fx-fill-height: true; }
+.stat-card { -fx-background-color: #FFFFFF; -fx-border-color: #D9E2EC; -fx-border-radius: 5; -fx-background-radius: 5; -fx-padding: 18; -fx-min-width: 170; -fx-effect: none; }
+.stat-card:hover { -fx-border-color: #008C95; }
+.stat-label { -fx-text-fill: #486581; -fx-font-size: 12px; -fx-font-weight: bold; }
+.stat-value { -fx-text-fill: #102A43; -fx-font-size: 26px; -fx-font-weight: bold; }
+.stat-hint { -fx-text-fill: #64748B; -fx-font-size: 13px; -fx-opacity: 1; }
+
+.toolbar { -fx-padding: 0 0 2 0; -fx-alignment: center-left; }
+.text-field, .combo-box, .text-area { -fx-background-color: #FFFFFF; -fx-border-color: #64748B; -fx-border-radius: 3; -fx-background-radius: 3; -fx-padding: 10 11; -fx-text-fill: #102A43; -fx-font-size: 14px; -fx-font-weight: normal; }
+.text-field .prompt-text, .text-area .prompt-text { -fx-fill: #64748B; -fx-opacity: 1; }
+.combo-box .list-cell { -fx-text-fill: #102A43; -fx-font-size: 14px; -fx-font-weight: normal; }
+.text-field:focused, .combo-box:focused, .text-area:focused { -fx-border-color: #008C95; -fx-background-color: #FFFFFF; }
+.button { -fx-font-size: 14px; -fx-font-weight: bold; -fx-padding: 10 16; -fx-background-radius: 3; -fx-cursor: hand; -fx-opacity: 1; }
+.primary-button { -fx-background-color: #008C95; -fx-text-fill: #FFFFFF; -fx-font-weight: bold; -fx-border-color: #008C95; }
+.primary-button:hover { -fx-background-color: #073B4C; -fx-border-color: #073B4C; }
+.secondary-button { -fx-background-color: #FFFFFF; -fx-border-color: #486581; -fx-border-width: 1; -fx-text-fill: #102A43; }
+.secondary-button:hover { -fx-background-color: #F4F7F9; }
+.danger-button { -fx-background-color: #C53030; -fx-text-fill: #FFFFFF; }
+.danger-button:hover { -fx-background-color: #9B2C2C; }
+.button:disabled { -fx-opacity: 0.5; -fx-cursor: default; }
+
+.data-table { -fx-background-color: #FFFFFF; -fx-border-color: #D9E2EC; -fx-border-radius: 3; }
+.data-table .column-header-background { -fx-background-color: #F4F7F9; }
+.data-table .column-header { -fx-background-color: transparent; -fx-padding: 11 8; }
+.data-table .column-header .label { -fx-text-fill: #062C3A; -fx-font-size: 13px; -fx-font-weight: bold; }
+.data-table .table-cell { -fx-padding: 12 8; -fx-text-fill: #102A43; -fx-font-size: 14px; -fx-opacity: 1; -fx-font-weight: normal; }
+.data-table .table-row-cell { -fx-opacity: 1; }
+.data-table .table-cell:filled { -fx-border-color: transparent transparent #D9E2EC transparent; }
+.data-table .table-row-cell:filled:hover { -fx-background-color: #F4F7F9; }
+.data-table .table-row-cell:filled:selected { -fx-background-color: #008C95; }
+.data-table .table-row-cell:filled:selected .table-cell { -fx-text-fill: #FFFFFF; }
+.money-column { -fx-alignment: center-right; }
+.empty-state { -fx-text-fill: #486581; -fx-font-size: 15px; -fx-font-weight: bold; -fx-padding: 30; -fx-opacity: 1; }
+.ledger-total { -fx-background-color: #F4F7F9; -fx-text-fill: #102A43; -fx-padding: 12; -fx-font-size: 15px; -fx-font-weight: bold; }
+
+.form-label { -fx-text-fill: #486581; -fx-font-size: 14px; -fx-font-weight: bold; }
+.detail-value { -fx-text-fill: #102A43; -fx-font-size: 16px; -fx-font-weight: bold; }
+.detail-identity { -fx-text-fill: #062C3A; -fx-font-size: 22px; -fx-font-weight: bold; }
+.status-active { -fx-text-fill: #16825D; -fx-font-weight: bold; }
+.status-muted { -fx-text-fill: #64748B; -fx-font-weight: bold; }
+.balance-caption { -fx-text-fill: #486581; -fx-font-size: 14px; -fx-font-weight: bold; }
+.balance-hero { -fx-text-fill: #102A43; -fx-font-size: 32px; -fx-font-weight: bold; }
+.calculation-preview { -fx-background-color: #F4F7F9; -fx-text-fill: #102A43; -fx-padding: 12; -fx-font-weight: bold; }
+.dialog-content { -fx-background-color: #F4F7F9; -fx-padding: 24px; }
+.receipt { -fx-background-color: #FFFFFF; -fx-border-color: #D9E2EC; -fx-padding: 20px; }
+.receipt-title { -fx-text-fill: #062C3A; -fx-font-size: 18px; -fx-font-weight: bold; }
+.receipt-key { -fx-text-fill: #486581; -fx-font-size: 14px; }
+.receipt-value { -fx-text-fill: #102A43; -fx-font-size: 14px; -fx-font-weight: bold; }
+.receipt-success { -fx-text-fill: #16825D; -fx-font-size: 15px; -fx-font-weight: bold; }
