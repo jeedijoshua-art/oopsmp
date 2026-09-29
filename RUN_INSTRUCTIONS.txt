@@ -1,0 +1,18 @@
+# Instructions to Run the Application
+
+This project is built using Maven and JavaFX.
+
+## Prerequisites
+- Java Development Kit (JDK) 17 or higher
+- Maven installed on your machine
+
+## To compile and run the application
+Open your terminal or command prompt in the project's root directory and run:
+`mvn clean javafx:run`
+
+## To run tests
+To execute all the test cases, use the following command:
+`mvn test`
+
+## To build a JAR package (optional)
+`mvn clean package`
