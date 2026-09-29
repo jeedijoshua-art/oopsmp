@@ -3,8 +3,8 @@ target/
 *.iml
 .DS_Store
 .vscode/
-database/
+
+# Runtime/local database files
 *.db
 *.sqlite
 *.sqlite3
-core-banking.db
