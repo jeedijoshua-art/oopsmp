@@ -10,10 +10,13 @@ import com.corebanking.service.TransactionService;
 import java.math.BigDecimal;
 import java.util.List;
 
+import java.sql.Connection;
+import java.sql.Statement;
+
 public final class DemoDataSeeder {
     private DemoDataSeeder() {}
 
-    public static void seed(BankService bankService, AccountService accountService, TransactionService transactionService) {
+    public static void seed(Connection connection, BankService bankService, AccountService accountService, TransactionService transactionService) {
         List<Bank> banks = bankService.listBanks();
         if (banks.stream().anyMatch(b -> b.getBankCode().equals("NSB"))) {
             // Already seeded or exists
@@ -34,5 +37,14 @@ public final class DemoDataSeeder {
         transactionService.withdraw(joshua.getAccountId(), new BigDecimal("100.00"), "ATM Withdrawal");
         transactionService.transfer(joshua.getAccountId(), roshan.getAccountId(), new BigDecimal("150.00"), "Rent payment");
         transactionService.transfer(roshan.getAccountId(), alice.getAccountId(), new BigDecimal("50.00"), "Dinner");
+
+        try (Statement statement = connection.createStatement()) {
+            statement.execute("UPDATE banks SET is_demo = 1 WHERE bank_code = 'NSB'");
+            statement.execute("UPDATE accounts SET is_demo = 1 WHERE bank_id = " + bank.getBankId());
+            statement.execute("UPDATE transactions SET is_demo = 1 WHERE from_account IN ('ACC-JOSHUA', 'ACC-ROSHAN', 'ACC-ALICE') OR to_account IN ('ACC-JOSHUA', 'ACC-ROSHAN', 'ACC-ALICE')");
+            statement.execute("UPDATE ledger_entries SET is_demo = 1 WHERE account_id IN ('ACC-JOSHUA', 'ACC-ROSHAN', 'ACC-ALICE') OR account_id = 'SYSTEM-CASH'");
+        } catch (Exception e) {
+            System.err.println("Failed to mark demo data: " + e.getMessage());
+        }
     }
 }

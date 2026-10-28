@@ -33,6 +33,57 @@ public final class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    public Account createAccount(String customerName, Integer age, String email, String phoneNumber, Long bankId,
+                                 AccountType accountType, BigDecimal initialBalance) {
+        requireText(customerName, "Customer name");
+        if (age == null || age < 18 || age > 120) {
+            throw new InvalidAccountDataException("Age must be between 18 and 120.");
+        }
+        requireText(email, "Email");
+        if (!email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+            throw new InvalidAccountDataException("Invalid email format.");
+        }
+        requireText(phoneNumber, "Phone number");
+        if (!phoneNumber.matches("^\\+?[0-9]{10,15}$")) {
+            throw new InvalidAccountDataException("Invalid phone number format.");
+        }
+        if (bankId == null || bankId <= 0 || !bankRepository.existsById(bankId)) {
+            throw new InvalidAccountDataException("Bank does not exist: " + bankId);
+        }
+        if (accountType == null) {
+            throw new InvalidAccountDataException("Account type is required.");
+        }
+        if (initialBalance == null || initialBalance.signum() < 0) {
+            throw new InvalidAccountDataException("Initial balance must be zero or greater.");
+        }
+
+        String accountId;
+        int attempts = 0;
+        do {
+            accountId = "ACC-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT);
+            attempts++;
+            if (attempts > 10) {
+                throw new IllegalStateException("Failed to generate a unique account ID.");
+            }
+        } while (accountRepository.existsById(accountId));
+
+        LocalDateTime now = LocalDateTime.now();
+        Account account;
+        try {
+            account = new Account(accountId, customerName, age, email, phoneNumber, bankId, accountType,
+                    initialBalance, AccountStatus.ACTIVE, now, now);
+        } catch (IllegalArgumentException exception) {
+            throw new InvalidAccountDataException(exception.getMessage());
+        }
+        try {
+            accountRepository.save(account);
+            return account;
+        } catch (DataAccessException exception) {
+            throw exception;
+        }
+    }
+
+    @Override
     public Account createAccount(String accountId, String customerName, Long bankId,
                                  AccountType accountType, BigDecimal initialBalance) {
         requireText(accountId, "Account ID");
@@ -56,7 +107,7 @@ public final class AccountServiceImpl implements AccountService {
         LocalDateTime now = LocalDateTime.now();
         Account account;
         try {
-            account = new Account(accountId, customerName, bankId, accountType,
+            account = new Account(accountId, customerName, null, null, null, bankId, accountType,
                     initialBalance, AccountStatus.ACTIVE, now, now);
         } catch (IllegalArgumentException exception) {
             throw new InvalidAccountDataException(exception.getMessage());
@@ -98,7 +149,7 @@ public final class AccountServiceImpl implements AccountService {
         if (accountType == null) {
             throw new InvalidAccountDataException("Account type is required.");
         }
-        Account updated = new Account(existing.getAccountId(), customerName, existing.getBankId(),
+        Account updated = new Account(existing.getAccountId(), customerName, existing.getAge(), existing.getEmail(), existing.getPhoneNumber(), existing.getBankId(),
                 accountType, existing.getBalance(), existing.getStatus(), existing.getCreatedAt(),
                 LocalDateTime.now());
         accountRepository.update(updated);
@@ -142,6 +193,15 @@ public final class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    public void deleteAccount(String accountId) {
+        Account account = findAccount(accountId);
+        if (account.getStatus() != AccountStatus.CLOSED) {
+            throw new InvalidAccountStateException("Account must be closed before it can be deleted.");
+        }
+        accountRepository.delete(accountId);
+    }
+
+    @Override
     public boolean accountExists(String accountId) {
         requireText(accountId, "Account ID");
         return accountRepository.existsById(accountId);
@@ -161,7 +221,7 @@ public final class AccountServiceImpl implements AccountService {
     }
 
     private Account updateStatus(Account account, AccountStatus status) {
-        Account updated = new Account(account.getAccountId(), account.getCustomerName(), account.getBankId(),
+        Account updated = new Account(account.getAccountId(), account.getCustomerName(), account.getAge(), account.getEmail(), account.getPhoneNumber(), account.getBankId(),
                 account.getAccountType(), account.getBalance(), status, account.getCreatedAt(),
                 LocalDateTime.now());
         accountRepository.update(updated);

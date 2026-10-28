@@ -22,8 +22,8 @@ public final class AccountRepository {
     }
 
     public void save(Account account) {
-        String sql = "INSERT INTO accounts (account_id, customer_name, bank_id, account_type, "
-                + "balance, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO accounts (account_id, customer_name, age, email, phone_number, bank_id, account_type, "
+                + "balance, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             bindAccount(statement, account);
             statement.executeUpdate();
@@ -33,7 +33,7 @@ public final class AccountRepository {
     }
 
     public Optional<Account> findById(String accountId) {
-        String sql = "SELECT account_id, customer_name, bank_id, account_type, balance, status, "
+        String sql = "SELECT account_id, customer_name, age, email, phone_number, bank_id, account_type, balance, status, "
                 + "created_at, updated_at FROM accounts WHERE account_id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, accountId);
@@ -46,7 +46,7 @@ public final class AccountRepository {
     }
 
     public List<Account> findAll() {
-        String sql = "SELECT account_id, customer_name, bank_id, account_type, balance, status, "
+        String sql = "SELECT account_id, customer_name, age, email, phone_number, bank_id, account_type, balance, status, "
             + "created_at, updated_at FROM accounts WHERE account_id <> 'SYSTEM-CASH' ORDER BY account_id";
         try (PreparedStatement statement = connection.prepareStatement(sql);
              ResultSet resultSet = statement.executeQuery()) {
@@ -69,17 +69,20 @@ public final class AccountRepository {
     }
 
     public void update(Account account) {
-        String sql = "UPDATE accounts SET customer_name = ?, bank_id = ?, account_type = ?, balance = ?, "
+        String sql = "UPDATE accounts SET customer_name = ?, age = ?, email = ?, phone_number = ?, bank_id = ?, account_type = ?, balance = ?, "
                 + "status = ?, created_at = ?, updated_at = ? WHERE account_id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, account.getCustomerName());
-            statement.setLong(2, account.getBankId());
-            statement.setString(3, account.getAccountType().name());
-            statement.setString(4, account.getBalance().toPlainString());
-            statement.setString(5, account.getStatus().name());
-            statement.setString(6, JdbcValueMapper.writeDateTime(account.getCreatedAt()));
-            statement.setString(7, JdbcValueMapper.writeDateTime(account.getUpdatedAt()));
-            statement.setString(8, account.getAccountId());
+            if (account.getAge() != null) { statement.setInt(2, account.getAge()); } else { statement.setNull(2, java.sql.Types.INTEGER); }
+            statement.setString(3, account.getEmail());
+            statement.setString(4, account.getPhoneNumber());
+            statement.setLong(5, account.getBankId());
+            statement.setString(6, account.getAccountType().name());
+            statement.setString(7, account.getBalance().toPlainString());
+            statement.setString(8, account.getStatus().name());
+            statement.setString(9, JdbcValueMapper.writeDateTime(account.getCreatedAt()));
+            statement.setString(10, JdbcValueMapper.writeDateTime(account.getUpdatedAt()));
+            statement.setString(11, account.getAccountId());
             if (statement.executeUpdate() == 0) {
                 throw new DataAccessException("Account was not found for update: " + account.getAccountId(), null);
             }
@@ -89,7 +92,7 @@ public final class AccountRepository {
     }
 
     public List<Account> findByBankId(Long bankId) {
-        String sql = "SELECT account_id, customer_name, bank_id, account_type, balance, status, "
+        String sql = "SELECT account_id, customer_name, age, email, phone_number, bank_id, account_type, balance, status, "
             + "created_at, updated_at FROM accounts WHERE bank_id = ? "
             + "AND account_id <> 'SYSTEM-CASH' ORDER BY account_id";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -116,6 +119,21 @@ public final class AccountRepository {
         }
     }
 
+    public void delete(String accountId) {
+        String sql = "DELETE FROM accounts WHERE account_id = ?";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, accountId);
+            if (statement.executeUpdate() == 0) {
+                throw new DataAccessException("Account was not found for deletion: " + accountId, null);
+            }
+        } catch (SQLException exception) {
+            if (exception.getMessage() != null && exception.getMessage().contains("FOREIGN KEY constraint failed")) {
+                throw new DataAccessException("Cannot delete account " + accountId + " because it has transaction or ledger history.", exception);
+            }
+            throw new DataAccessException("Failed to delete account: " + accountId, exception);
+        }
+    }
+
     public void ensureSystemCashAccount() {
         String sql = "INSERT OR IGNORE INTO accounts "
                 + "(account_id, customer_name, bank_id, account_type, balance, status) "
@@ -131,16 +149,21 @@ public final class AccountRepository {
     private void bindAccount(PreparedStatement statement, Account account) throws SQLException {
         statement.setString(1, account.getAccountId());
         statement.setString(2, account.getCustomerName());
-        statement.setLong(3, account.getBankId());
-        statement.setString(4, account.getAccountType().name());
-        statement.setString(5, account.getBalance().toPlainString());
-        statement.setString(6, account.getStatus().name());
-        statement.setString(7, JdbcValueMapper.writeDateTime(account.getCreatedAt()));
-        statement.setString(8, JdbcValueMapper.writeDateTime(account.getUpdatedAt()));
+        if (account.getAge() != null) { statement.setInt(3, account.getAge()); } else { statement.setNull(3, java.sql.Types.INTEGER); }
+        statement.setString(4, account.getEmail());
+        statement.setString(5, account.getPhoneNumber());
+        statement.setLong(6, account.getBankId());
+        statement.setString(7, account.getAccountType().name());
+        statement.setString(8, account.getBalance().toPlainString());
+        statement.setString(9, account.getStatus().name());
+        statement.setString(10, JdbcValueMapper.writeDateTime(account.getCreatedAt()));
+        statement.setString(11, JdbcValueMapper.writeDateTime(account.getUpdatedAt()));
     }
 
     private Account mapRow(ResultSet resultSet) throws SQLException {
+        Integer age = resultSet.getObject("age") != null ? resultSet.getInt("age") : null;
         return new Account(resultSet.getString("account_id"), resultSet.getString("customer_name"),
+                age, resultSet.getString("email"), resultSet.getString("phone_number"),
                 resultSet.getLong("bank_id"), AccountType.valueOf(resultSet.getString("account_type")),
                 JdbcValueMapper.readMoney(resultSet, "balance"),
                 AccountStatus.valueOf(resultSet.getString("status")),

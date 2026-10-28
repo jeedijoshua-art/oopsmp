@@ -8,3 +8,5 @@ target/
 *.db
 *.sqlite
 *.sqlite3
+*.bak
+data/

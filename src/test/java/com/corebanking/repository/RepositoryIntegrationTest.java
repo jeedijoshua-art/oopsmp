@@ -177,7 +177,7 @@ class RepositoryIntegrationTest {
     }
 
     private Account account(String accountId, Long bankId, BigDecimal balance, AccountStatus status) {
-        return new Account(accountId, "Customer " + accountId, bankId, AccountType.SAVINGS,
+        return new Account(accountId, "Customer " + accountId, null, null, null, bankId, AccountType.SAVINGS,
                 balance, status, CREATED_AT, CREATED_AT);
     }
 

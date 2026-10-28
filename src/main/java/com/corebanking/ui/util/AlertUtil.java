@@ -22,6 +22,7 @@ public final class AlertUtil {
         alert.setTitle("Action could not be completed");
         alert.setHeaderText(header(error));
         alert.setContentText(message(error));
+        styleAlert(alert);
         alert.showAndWait();
     }
 
@@ -30,6 +31,7 @@ public final class AlertUtil {
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(message);
+        styleAlert(alert);
         alert.showAndWait();
     }
 
@@ -37,7 +39,20 @@ public final class AlertUtil {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION, message, ButtonType.CANCEL, ButtonType.OK);
         alert.setTitle(title);
         alert.setHeaderText(null);
+        styleAlert(alert);
         return alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
+    }
+
+    private static void styleAlert(Alert alert) {
+        try {
+            var cssUrl = AlertUtil.class.getResource("/css/application.css");
+            if (cssUrl != null) {
+                alert.getDialogPane().getStylesheets().add(cssUrl.toExternalForm());
+                alert.getDialogPane().getStyleClass().add("banking-alert");
+            }
+        } catch (Exception ignored) {
+            // Fallback gracefully if graphics environment or resource cannot load
+        }
     }
 
     private static String header(Throwable error) {

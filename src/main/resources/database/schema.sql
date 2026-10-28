@@ -2,18 +2,23 @@ CREATE TABLE IF NOT EXISTS banks (
     bank_id INTEGER PRIMARY KEY AUTOINCREMENT,
     bank_code TEXT NOT NULL UNIQUE,
     bank_name TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_demo INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS accounts (
     account_id TEXT PRIMARY KEY,
     customer_name TEXT NOT NULL,
+    age INTEGER,
+    email TEXT,
+    phone_number TEXT,
     bank_id INTEGER NOT NULL,
     account_type TEXT NOT NULL,
     balance TEXT NOT NULL DEFAULT '0.00',
     status TEXT NOT NULL DEFAULT 'ACTIVE',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_demo INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (bank_id) REFERENCES banks (bank_id),
     CHECK (status IN ('ACTIVE', 'INACTIVE', 'CLOSED'))
 );
@@ -27,6 +32,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     status TEXT NOT NULL,
     description TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_demo INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (from_account) REFERENCES accounts (account_id),
     FOREIGN KEY (to_account) REFERENCES accounts (account_id)
 );
@@ -39,6 +45,7 @@ CREATE TABLE IF NOT EXISTS ledger_entries (
     amount TEXT NOT NULL,
     description TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_demo INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (transaction_id) REFERENCES transactions (transaction_id),
     FOREIGN KEY (account_id) REFERENCES accounts (account_id),
     CHECK (entry_type IN ('DEBIT', 'CREDIT'))

@@ -116,9 +116,9 @@ class IdGeneratorTest {
         LocalDateTime createdAt = LocalDateTime.of(2026, 9, 25, 10, 30);
         new BankRepository(connection).save(new Bank(1L, "BANK-A", "Test Bank", createdAt));
         AccountRepository repository = new AccountRepository(connection);
-        repository.save(new Account("A001", "Account One", 1L, AccountType.SAVINGS,
+        repository.save(new Account("A001", "Account One", null, null, null, 1L, AccountType.SAVINGS,
                 BigDecimal.ZERO, AccountStatus.ACTIVE, createdAt, createdAt));
-        repository.save(new Account("A002", "Account Two", 1L, AccountType.SAVINGS,
+        repository.save(new Account("A002", "Account Two", null, null, null, 1L, AccountType.SAVINGS,
                 BigDecimal.ZERO, AccountStatus.ACTIVE, createdAt, createdAt));
     }
 }

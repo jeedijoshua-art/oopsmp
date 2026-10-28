@@ -33,6 +33,8 @@ public final class DatabaseInitializer {
                     }
                 }
                 addLedgerDescriptionColumnIfMissing(connection);
+                addIsDemoColumnIfMissing(connection);
+                addAccountColumnsIfMissing(connection);
             }
         }
     }
@@ -42,6 +44,33 @@ public final class DatabaseInitializer {
             if (!columns.next()) {
                 try (var statement = connection.createStatement()) {
                     statement.execute("ALTER TABLE ledger_entries ADD COLUMN description TEXT");
+                }
+            }
+        }
+    }
+
+    private static void addIsDemoColumnIfMissing(Connection connection) throws SQLException {
+        String[] tables = {"banks", "accounts", "transactions", "ledger_entries"};
+        for (String table : tables) {
+            try (var columns = connection.getMetaData().getColumns(null, null, table, "is_demo")) {
+                if (!columns.next()) {
+                    try (var statement = connection.createStatement()) {
+                        statement.execute("ALTER TABLE " + table + " ADD COLUMN is_demo INTEGER NOT NULL DEFAULT 0");
+                    }
+                }
+            }
+        }
+    }
+
+    private static void addAccountColumnsIfMissing(Connection connection) throws SQLException {
+        String[] columnsToAdd = {"age INTEGER", "email TEXT", "phone_number TEXT"};
+        for (String colDef : columnsToAdd) {
+            String colName = colDef.split(" ")[0];
+            try (var columns = connection.getMetaData().getColumns(null, null, "accounts", colName)) {
+                if (!columns.next()) {
+                    try (var statement = connection.createStatement()) {
+                        statement.execute("ALTER TABLE accounts ADD COLUMN " + colDef);
+                    }
                 }
             }
         }

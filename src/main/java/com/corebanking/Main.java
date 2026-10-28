@@ -10,6 +10,8 @@ import com.corebanking.service.BankService;
 import com.corebanking.service.BankServiceImpl;
 import com.corebanking.service.TransactionService;
 import com.corebanking.service.TransactionServiceImpl;
+import com.corebanking.service.DatabaseManagementService;
+import com.corebanking.service.DatabaseManagementServiceImpl;
 import com.corebanking.ui.AppShell;
 import javafx.application.Application;
 import javafx.scene.Scene;
@@ -27,14 +29,16 @@ public final class Main extends Application {
         AccountService accountService = new AccountServiceImpl(accountRepository, new BankRepository(connection));
         BankService bankService = new BankServiceImpl(new BankRepository(connection));
         TransactionService transactionService = new TransactionServiceImpl(connection, accountService);
-        AppShell shell = new AppShell(connection, accountService, bankService, transactionService);
 
-        Scene scene = new Scene(shell.build(), 1320, 820);
+        com.corebanking.service.DatabaseManagementService dbmService = new com.corebanking.service.DatabaseManagementServiceImpl(connection);
+        AppShell shell = new AppShell(connection, accountService, bankService, transactionService, dbmService);
+
+        Scene scene = new Scene(shell.build(), 1340, 840);
         scene.getStylesheets().add(getClass().getResource("/css/application.css").toExternalForm());
 
-        stage.setTitle("Core Banking Ledger System");
-        stage.setMinWidth(1050);
-        stage.setMinHeight(680);
+        stage.setTitle("VaultLedger — Core Banking Account Lifecycle & Ledger System");
+        stage.setMinWidth(1100);
+        stage.setMinHeight(720);
         stage.setScene(scene);
         stage.setOnCloseRequest(event -> closeConnection());
         stage.show();

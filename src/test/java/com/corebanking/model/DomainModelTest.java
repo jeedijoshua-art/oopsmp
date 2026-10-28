@@ -42,7 +42,7 @@ class DomainModelTest {
 
     @Test
     void validAccountUsesNormalizedBalanceAndActiveStatus() {
-        Account account = new Account("A001", "Test Customer", 1L, AccountType.SAVINGS,
+        Account account = new Account("A001", "Test Customer", null, null, null, 1L, AccountType.SAVINGS,
                 new BigDecimal("100"), CREATED_AT);
 
         assertEquals(new BigDecimal("100.00"), account.getBalance());
@@ -53,21 +53,21 @@ class DomainModelTest {
     @Test
     void negativeAccountBalanceIsRejected() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Account("A001", "Test Customer", 1L, AccountType.SAVINGS,
+                () -> new Account("A001", "Test Customer", null, null, null, 1L, AccountType.SAVINGS,
                         new BigDecimal("-0.01"), CREATED_AT));
     }
 
     @Test
     void blankAccountIdIsRejected() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Account(" ", "Test Customer", 1L, AccountType.SAVINGS,
+                () -> new Account(" ", "Test Customer", null, null, null, 1L, AccountType.SAVINGS,
                         BigDecimal.ZERO, CREATED_AT));
     }
 
     @Test
     void blankCustomerNameIsRejected() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Account("A001", " ", 1L, AccountType.SAVINGS,
+                () -> new Account("A001", " ", null, null, null, 1L, AccountType.SAVINGS,
                         BigDecimal.ZERO, CREATED_AT));
     }
 
@@ -126,5 +126,19 @@ class DomainModelTest {
                 assertEquals(true, Modifier.isFinal(field.getModifiers()));
             }
         }
+    }
+
+    @Test
+    void accountEqualsAndHashCodeBasedOnAccountId() {
+        Account a1 = new Account("ACC-001", "Alice", 1L, AccountType.SAVINGS, new BigDecimal("100.00"), CREATED_AT);
+        Account a2 = new Account("ACC-001", "Alice Updated", 1L, AccountType.SAVINGS, new BigDecimal("200.00"), CREATED_AT);
+        Account a3 = new Account("acc-001", "Alice Case", 1L, AccountType.SAVINGS, new BigDecimal("100.00"), CREATED_AT);
+        Account b = new Account("ACC-002", "Bob", 1L, AccountType.SAVINGS, new BigDecimal("100.00"), CREATED_AT);
+
+        assertEquals(a1, a2);
+        assertEquals(a1, a3);
+        assertEquals(a1.hashCode(), a2.hashCode());
+        assertEquals(a1.hashCode(), a3.hashCode());
+        org.junit.jupiter.api.Assertions.assertNotEquals(a1, b);
     }
 }

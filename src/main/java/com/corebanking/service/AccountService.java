@@ -11,6 +11,9 @@ public interface AccountService {
     Account createAccount(String accountId, String customerName, Long bankId,
                           AccountType accountType, BigDecimal initialBalance);
 
+    Account createAccount(String customerName, Integer age, String email, String phoneNumber, Long bankId,
+                          AccountType accountType, BigDecimal initialBalance);
+
     Account findAccount(String accountId);
 
     List<Account> listAccounts();
@@ -24,6 +27,8 @@ public interface AccountService {
     Account deactivateAccount(String accountId);
 
     Account closeAccount(String accountId);
+
+    void deleteAccount(String accountId);
 
     boolean accountExists(String accountId);
 
