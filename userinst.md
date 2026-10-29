@@ -126,7 +126,7 @@ mvn clean javafx:run
 
 ### Running Automated Tests
 
-Execute the automated test suite (all 91 tests):
+Execute the automated test suite (all 121 tests):
 ```bash
 mvn clean test
 ```
@@ -704,7 +704,7 @@ The Maven OpenJFX plugin automatically configures the Java module path and nativ
 | **3:00 – 4:00** | **Deposit & Transfer** | Click **`+ Deposit`** to deposit ₹500 into Alice's account, then transfer ₹200 to Joshua. | *"Every transaction is atomic. Concurrency locks prevent race conditions, updating balances and generating double-entry accounting records simultaneously."* |
 | **4:00 – 5:00** | **Inspect Ledger** | Navigate to **`📒 Ledger`**. Filter by transaction. | *"Every financial movement generates paired Debit and Credit entries. The audit bar at the bottom continuously validates that total debits equal total credits."* |
 | **5:00 – 6:00** | **Validation & Rules** | Attempt an overdraft withdrawal. Show Account Details lifecycle. | *"Business rules prevent overdrafts and enforce strict lifecycle states. An account cannot be closed unless its balance is exactly zero, and audit records cannot be deleted."* |
-| **6:00 – 7:00** | **Persistence & Q&A** | Close app, relaunch, show data retained. | *"All data is persisted in SQLite with foreign keys enforced. We have 91 automated unit and integration tests verifying these mechanisms."* |
+| **6:00 – 7:00** | **Persistence & Q&A** | Close app, relaunch, show data retained. | *"All data is persisted in SQLite with foreign keys enforced. We have 121 automated unit and integration tests verifying these mechanisms."* |
 
 ---
 

@@ -33,6 +33,11 @@ public class TransactionDialogTest {
 
     @BeforeAll
     public static void initJavaFx() {
+        String os = System.getProperty("os.name", "").toLowerCase();
+        if (os.contains("linux") && System.getenv("DISPLAY") == null) {
+            javafxAvailable = false;
+            return;
+        }
         try {
             CountDownLatch latch = new CountDownLatch(1);
             Platform.startup(latch::countDown);
