@@ -149,7 +149,7 @@ oopsmp/
 │   │       │   └── application.css       # High-contrast VaultLedger banking theme
 │   │       └── database/
 │   │           └── schema.sql            # Relational database table definitions and indices
-│   └── test/java/com/corebanking/        # 94 automated unit, integration, & UI tests
+│   └── test/java/com/corebanking/        # 110 automated unit, integration, concurrency, & UI tests
 ├── pom.xml                               # Maven project definition
 ├── userinst.md                           # Extended user manual and demonstration script
 └── README.md                             # Project documentation (this file)
