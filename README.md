@@ -4,7 +4,7 @@
 [![JavaFX](https://img.shields.io/badge/JavaFX-21.0.5-orange.svg)](https://openjfx.io/)
 [![Database](https://img.shields.io/badge/SQLite-3.46.1.0-lightgrey.svg)](https://sqlite.org/)
 [![Build Tool](https://img.shields.io/badge/Maven-3.x-red.svg)](https://maven.apache.org/)
-[![Tests](https://img.shields.io/badge/Tests-121%20Passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-131%20Passed-brightgreen.svg)]()
 [![Repository](https://img.shields.io/badge/GitHub-jeedijoshua--art%2Foopsmp-blue.svg)](https://github.com/jeedijoshua-art/oopsmp)
 
 > **Academic Notice:** **VaultLedger** is an academic desktop banking simulation engineered to demonstrate core banking principles, double-entry bookkeeping, strict account lifecycle states, atomic transactions, and thread-safe concurrency controls. It is designed strictly for educational and evaluation purposes and is not intended for production banking deployments or real customer funds.
@@ -22,13 +22,14 @@
 5. [Prerequisites](#5-prerequisites)
 6. [Clone and Run on macOS](#6-clone-and-run-on-macos)
 7. [Clone and Run on Windows](#7-clone-and-run-on-windows)
-8. [First Launch and Demo Data](#8-first-launch-and-demo-data)
-9. [Complete UI User Guide](#9-complete-ui-user-guide)
-10. [Demonstration Scenarios](#10-demonstration-scenarios)
-11. [Testing](#11-testing)
-12. [Troubleshooting](#12-troubleshooting)
-13. [GitHub Repository & Contribution Workflow](#13-github-repository--contribution-workflow)
-14. [Academic Disclaimer](#14-academic-disclaimer)
+8. [Authentication & Operator Access Control](#8-authentication--operator-access-control)
+9. [First Launch and Demo Data](#9-first-launch-and-demo-data)
+10. [Complete UI User Guide](#10-complete-ui-user-guide)
+11. [Demonstration Scenarios](#11-demonstration-scenarios)
+12. [Testing](#12-testing)
+13. [Troubleshooting](#13-troubleshooting)
+14. [GitHub Repository & Contribution Workflow](#14-github-repository--contribution-workflow)
+15. [Academic Disclaimer](#15-academic-disclaimer)
 
 ---
 
@@ -252,7 +253,64 @@ mvn test
 
 ---
 
-## 8. First Launch and Demo Data
+## 8. Authentication & Operator Access Control
+
+VaultLedger enforces an administrative authentication barrier prior to granting access to the core banking dashboard and ledger operations.
+
+### Operator Login Interface
+When launched, the desktop client opens directly to the **Operator Sign In** window featuring:
+- **VaultLedger Branding:** Dark navy (`#082B40`) background with a high-contrast card and security shield badge.
+- **Username Field:** Pre-filled with `admin` by default for evaluation convenience.
+- **Masked Password Field:** Features a dual-state `Show` / `Hide` toggle for password inspection or privacy.
+- **Default Action:** The `Enter` key triggers immediate credential verification.
+- **Timing-Safe Verification:** Password verification uses `MessageDigest.isEqual` byte comparison to prevent timing side-channel attacks.
+- **Generic Error Alerts:** Prevents account reconnaissance by displaying uniform *"Invalid username or password."* notifications.
+
+### Default Evaluation Credentials
+For academic evaluation and grading:
+* **Administrator Username:** `admin`
+* **Default Demo Password:** `admin@123`
+
+### Flexible Local Credential Configuration
+In adherence to production security standards, **no plaintext passwords are hardcoded in git-tracked source code**. The system resolves operator credentials using the following hierarchy:
+
+1. **JVM System Property:**
+   ```bash
+   mvn javafx:run -Dvaultledger.admin.password="admin@123"
+   ```
+2. **Environment Variable:**
+   - **macOS / Linux:**
+     ```bash
+     export VAULTLEDGER_ADMIN_PASSWORD="admin@123"
+     mvn javafx:run
+     ```
+   - **Windows (PowerShell):**
+     ```powershell
+     $env:VAULTLEDGER_ADMIN_PASSWORD="admin@123"
+     mvn javafx:run
+     ```
+3. **Local Git-Ignored Configuration File (`data/auth.properties`):**
+   Create `data/auth.properties` (which is excluded from Git by `.gitignore`):
+   ```properties
+   vaultledger.admin.username=admin
+   vaultledger.admin.password=admin@123
+   ```
+4. **Fail-Closed Behavior:**
+   If no password configuration is present across any source, the application fails closed and displays an inline configuration guide explaining how to set the local password, rather than allowing arbitrary access.
+
+### Session Management & Sign Out
+* **Active Operator Badge:** The top navigation header indicates the active session state: `👤 Operator: admin`.
+* **Instant Session Invalidation:** Clicking **`Sign Out`** in either the top bar or left navigation sidebar clears the session, discards dashboard views, and returns the operator to the Sign In screen.
+* **Clean Termination:** Closing the window from either the login screen or banking shell gracefully shuts down database connections and invokes `Platform.exit()`.
+
+### Academic Scope & Limitations
+This authentication module is designed for academic evaluation of banking access control:
+- Credential comparison is executed locally in-process with constant-time byte comparisons.
+- Multi-factor authentication (MFA), hardware tokens, biometric authentication, and enterprise Single Sign-On (SSO / LDAP / SAML) are outside the scope of this desktop simulation.
+
+---
+
+## 9. First Launch and Demo Data
 
 ### Initial State
 On first launch, if no database exists, VaultLedger automatically creates `data/core-banking.db` and applies the schema from `schema.sql`. The system cash pool (`SYSTEM-CASH`) and system bank (`SYSTEM`) are provisioned automatically.
@@ -295,7 +353,7 @@ The seeder (`DemoDataSeeder.java`) creates:
 
 ---
 
-## 9. Complete UI User Guide
+## 10. Complete UI User Guide
 
 ### 1. Dashboard (`⊞ Dashboard`)
 The primary monitoring overview:
@@ -355,7 +413,7 @@ Auditor and compliance screen:
 
 ---
 
-## 10. Demonstration Scenarios
+## 11. Demonstration Scenarios
 
 Use these 10 practical scenarios to demonstrate all capabilities during presentations or evaluation sessions:
 
@@ -446,9 +504,9 @@ Use these 10 practical scenarios to demonstrate all capabilities during presenta
 
 ---
 
-## 11. Testing
+## 12. Testing
 
-VaultLedger includes a suite of automated unit, integration, and UI tests executed via JUnit 5:
+VaultLedger includes a comprehensive suite of automated unit, integration, and UI tests executed via JUnit 5:
 
 ```bash
 # Run all tests
@@ -457,36 +515,41 @@ mvn test
 # Run the Core Banking Engine Audit Suite
 mvn test -Dtest=CoreBankingEngineAuditTest
 
+# Run the Authentication & Operator Security Suite
+mvn test -Dtest=AuthenticationServiceTest,LoginFlowUITest
+
 # Run a specific test class
 mvn test -Dtest=TransferServiceTest
 ```
 
 ### Verified Test Results
 ```text
-Tests run: 121, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 131, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
 
 ### What the Tests Cover
-1. **CSV Export Engine (`CsvExporterTest`):** RFC 4180 escaping, header specifications for transactions and ledger, exact decimal representation without floating-point drift, Indian Rupee (₹) and UTF-8 BOM encoding for Microsoft Excel, debit/credit leg column separation, active query filtering, file round-trip durability, and OWASP formula-injection protection.
-2. **Core Banking Engine Audit (`CoreBankingEngineAuditTest`):** 16 comprehensive compliance scenarios including valid deposits, withdrawals, overdraft prevention, invalid amount guards, inactive/closed account handling, intra-bank transfers, inter-bank transfers across distinct institutions, self-transfer rejection, dual-entry debit=credit validation, simulated crash and failure-injection rollback (verifying 0 partial records), concurrent limited-funds withdrawals (preventing negative balances), multi-threaded transfer liquidity conservation, global transaction ID uniqueness, SQLite disk persistence across connection reopenings, receipt-to-database match with post-transaction balance confirmation, and ledger reconciliation discrepancy detection.
-3. **Domain Models (`DomainModelTest`):** Validation of Account, Bank, Transaction, LedgerEntry, MoneyUtil, and `equals`/`hashCode` identity.
-4. **Account Services (`AccountServiceTest`, `AccountManagementTest`):** Account onboarding, age restrictions, email validation, and state machine transitions (`ACTIVE`, `INACTIVE`, `CLOSED`).
-5. **Transaction Services (`TransactionServiceTest`, `TransferServiceTest`):** Deposit calculations, withdrawal limits, overdraft rejection, and atomic transfers.
-6. **Double-Entry Ledger (`LedgerServiceTest`):** Validation of dual debit/credit entries, balanced ledger invariant enforcement, and reconciliation reporting.
-7. **Concurrency & Deadlock Prevention (`ConcurrencyIntegrationTest`):** Multi-threaded concurrent deposits and transfers across threads to prove thread safety and absence of deadlocks.
-8. **Data Access Layer (`RepositoryIntegrationTest`, `DatabaseLayerTest`):** SQLite schema creation, foreign key constraints, column additions, and JDBC query mapping.
-9. **UI Presentation Tier (`AppShellUITest`, `TransactionDialogTest`):** JavaFX node creation, modal dialogs, account preselection, live calculation previews, and GitHub link verification.
+1. **Authentication & Operator Access Control (`AuthenticationServiceTest`, `LoginFlowUITest`):** Constant-time byte comparison (`MessageDigest.isEqual`), fail-closed behavior for unconfigured environments, hierarchical credential resolution (System Properties > Environment Variables > git-ignored `data/auth.properties`), generic error messages for invalid usernames/passwords, JavaFX password masking/unmasking toggle (`Show`/`Hide`), inline error banner rendering, and active session invalidation via top-bar and sidebar logout triggers.
+2. **CSV Export Engine (`CsvExporterTest`):** RFC 4180 escaping, header specifications for transactions and ledger, exact decimal representation without floating-point drift, Indian Rupee (₹) and UTF-8 BOM encoding for Microsoft Excel, debit/credit leg column separation, active query filtering, file round-trip durability, and OWASP formula-injection protection.
+3. **Core Banking Engine Audit (`CoreBankingEngineAuditTest`):** 16 comprehensive compliance scenarios including valid deposits, withdrawals, overdraft prevention, invalid amount guards, inactive/closed account handling, intra-bank transfers, inter-bank transfers across distinct institutions, self-transfer rejection, dual-entry debit=credit validation, simulated crash and failure-injection rollback (verifying 0 partial records), concurrent limited-funds withdrawals (preventing negative balances), multi-threaded transfer liquidity conservation, global transaction ID uniqueness, SQLite disk persistence across connection reopenings, receipt-to-database match with post-transaction balance confirmation, and ledger reconciliation discrepancy detection.
+4. **Domain Models (`DomainModelTest`):** Validation of Account, Bank, Transaction, LedgerEntry, MoneyUtil, and `equals`/`hashCode` identity.
+5. **Account Services (`AccountServiceTest`, `AccountManagementTest`):** Account onboarding, age restrictions, email validation, and state machine transitions (`ACTIVE`, `INACTIVE`, `CLOSED`).
+6. **Transaction Services (`TransactionServiceTest`, `TransferServiceTest`):** Deposit calculations, withdrawal limits, overdraft rejection, and atomic transfers.
+7. **Double-Entry Ledger (`LedgerServiceTest`):** Validation of dual debit/credit entries, balanced ledger invariant enforcement, and reconciliation reporting.
+8. **Concurrency & Deadlock Prevention (`ConcurrencyIntegrationTest`):** Multi-threaded concurrent deposits and transfers across threads to prove thread safety and absence of deadlocks.
+9. **Data Access Layer (`RepositoryIntegrationTest`, `DatabaseLayerTest`):** SQLite schema creation, foreign key constraints, column additions, and JDBC query mapping.
+10. **UI Presentation Tier (`AppShellUITest`, `TransactionDialogTest`):** JavaFX node creation, modal dialogs, account preselection, live calculation previews, and GitHub link verification.
 
 ---
 
-## 12. Troubleshooting
+## 13. Troubleshooting
 
 | Issue | Probable Cause | Verified Resolution |
 | :--- | :--- | :--- |
 | **`java: command not found`** | JDK 17 is not installed or not on the system PATH. | Install JDK 17 (Eclipse Temurin or OpenJDK) and ensure `JAVA_HOME/bin` is added to your PATH environment variable. |
 | **`mvn: command not found`** | Apache Maven is not installed or not on PATH. | Install Maven via `brew install maven` (macOS) or `winget install Apache.Maven` (Windows). |
 | **JavaFX runtime components missing** | Running `java com.corebanking.Main` directly without JavaFX modules. | Always launch using Maven: `mvn javafx:run`. Maven resolves JavaFX dependencies automatically. |
+| **Authentication failed on login** | Password does not match local configuration. | Verify demo credentials (`admin` / `admin@123`), configure `data/auth.properties`, or launch with `mvn javafx:run -Dvaultledger.admin.password="admin@123"`. |
 | **Empty tables on initial launch** | Fresh database with no records. | On the Dashboard, click **`Load Demo Data`** under Quick Actions. |
 | **`Insufficient funds` error** | Withdrawal or transfer exceeds account balance. | Enter an amount less than or equal to the account balance. |
 | **Account dropdown empty during transfer** | System has fewer than two active accounts. | Ensure at least two accounts are created and in the `ACTIVE` state. |
@@ -494,7 +557,7 @@ BUILD SUCCESS
 
 ---
 
-## 13. GitHub Repository & Contribution Workflow
+## 14. GitHub Repository & Contribution Workflow
 
 **Remote Repository:** [https://github.com/jeedijoshua-art/oopsmp.git](https://github.com/jeedijoshua-art/oopsmp.git)
 
@@ -528,7 +591,7 @@ git push -u origin feature/your-feature-name
 
 ---
 
-## 14. Academic Disclaimer
+## 15. Academic Disclaimer
 
 **VaultLedger** is developed solely for educational coursework and academic evaluation. It does not possess financial certifications, PCI-DSS compliance, or integration with real-world banking payment gateways. Do not use this software for processing real financial transactions.
 

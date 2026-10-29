@@ -87,9 +87,17 @@ public final class AppShell {
     private final Label sectionTitle = new Label();
     private final Label sectionHint = new Label();
     private final ToggleGroup navigationGroup = new ToggleGroup();
+    private final String authenticatedUser;
+    private final Runnable onLogout;
 
     public AppShell(Connection connection, AccountService accountService, BankService bankService,
                     TransactionService transactionService, com.corebanking.service.DatabaseManagementService dbmService) {
+        this(connection, accountService, bankService, transactionService, dbmService, "admin", null);
+    }
+
+    public AppShell(Connection connection, AccountService accountService, BankService bankService,
+                    TransactionService transactionService, com.corebanking.service.DatabaseManagementService dbmService,
+                    String authenticatedUser, Runnable onLogout) {
         this.connection = Objects.requireNonNull(connection);
         this.accountService = Objects.requireNonNull(accountService);
         this.bankService = Objects.requireNonNull(bankService);
@@ -99,6 +107,8 @@ public final class AppShell {
         this.ledgerRepository = new LedgerRepository(connection);
         this.ledgerService = new LedgerServiceImpl(this.ledgerRepository, this.transactionRepository);
         this.dbmService = Objects.requireNonNull(dbmService);
+        this.authenticatedUser = authenticatedUser != null ? authenticatedUser : "admin";
+        this.onLogout = onLogout;
     }
 
     public Parent build() {
@@ -133,6 +143,17 @@ public final class AppShell {
 
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
+
+        Button sidebarSignOut = new Button("⎋  Sign Out");
+        sidebarSignOut.getStyleClass().addAll("button", "sidebar-logout-button");
+        sidebarSignOut.setMaxWidth(Double.MAX_VALUE);
+        sidebarSignOut.setAlignment(Pos.CENTER_LEFT);
+        sidebarSignOut.setAccessibleText("Sign out of current administrative session");
+        if (onLogout != null) {
+            sidebarSignOut.setOnAction(event -> onLogout.run());
+        } else {
+            sidebarSignOut.setDisable(true);
+        }
         
         Label footerSim = new Label("ACADEMIC SIMULATION");
         footerSim.getStyleClass().add("sidebar-footer-title");
@@ -142,7 +163,7 @@ public final class AppShell {
         VBox footerBox = new VBox(5, footerSim, footerDb, githubLink);
         footerBox.getStyleClass().add("sidebar-footer");
 
-        sidebar.getChildren().addAll(brandBox, new Separator(), nav, spacer, footerBox);
+        sidebar.getChildren().addAll(brandBox, new Separator(), nav, spacer, sidebarSignOut, footerBox);
         return sidebar;
     }
 
@@ -206,7 +227,7 @@ public final class AppShell {
     }
 
     private Node buildHeader() {
-        HBox header = new HBox(18);
+        HBox header = new HBox(16);
         header.getStyleClass().add("topbar");
         header.setAlignment(Pos.CENTER_LEFT);
         sectionTitle.getStyleClass().add("section-title");
@@ -216,7 +237,26 @@ public final class AppShell {
         HBox.setHgrow(spacer, Priority.ALWAYS);
         Label status = new Label("● LOCAL DATABASE  |  ONLINE");
         status.getStyleClass().add("system-status");
-        header.getChildren().addAll(titles, spacer, status);
+
+        HBox userBadge = new HBox(6);
+        userBadge.setAlignment(Pos.CENTER);
+        userBadge.getStyleClass().add("user-badge");
+        Label userIcon = new Label("👤");
+        userIcon.getStyleClass().add("user-badge-icon");
+        Label userText = new Label("Operator: " + authenticatedUser);
+        userText.getStyleClass().add("user-badge-text");
+        userBadge.getChildren().addAll(userIcon, userText);
+
+        Button signOutBtn = new Button("Sign Out");
+        signOutBtn.getStyleClass().addAll("button", "logout-button");
+        signOutBtn.setAccessibleText("Sign out of current administrative session");
+        if (onLogout != null) {
+            signOutBtn.setOnAction(event -> onLogout.run());
+        } else {
+            signOutBtn.setDisable(true);
+        }
+
+        header.getChildren().addAll(titles, spacer, status, userBadge, signOutBtn);
         return header;
     }
 

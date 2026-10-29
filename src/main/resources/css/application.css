@@ -903,3 +903,221 @@
     -fx-font-size: 13px;
     -fx-font-weight: bold;
 }
+
+/* --------------------------------------------------------------------------
+   LOGIN SCREEN & AUTHENTICATION STYLING
+   -------------------------------------------------------------------------- */
+.login-root {
+    -fx-background-color: linear-gradient(to bottom right, #082B40, #0A1728, #12263F);
+    -fx-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.login-card {
+    -fx-background-color: #FFFFFF;
+    -fx-background-radius: 12px;
+    -fx-border-color: #D5E0E8;
+    -fx-border-width: 1px;
+    -fx-border-radius: 12px;
+    -fx-padding: 36px 38px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.35), 24, 0.2, 0, 8);
+}
+
+.login-icon-badge {
+    -fx-background-color: #E6FFFA;
+    -fx-background-radius: 28px;
+    -fx-min-width: 56px;
+    -fx-min-height: 56px;
+    -fx-max-width: 56px;
+    -fx-max-height: 56px;
+    -fx-alignment: center;
+}
+
+.login-shield-icon {
+    -fx-fill: #009C9C;
+    -fx-scale-x: 1.4;
+    -fx-scale-y: 1.4;
+}
+
+.login-brand-title {
+    -fx-text-fill: #082B40;
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+}
+
+.login-brand-subtitle {
+    -fx-text-fill: #009C9C;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.login-access-prompt {
+    -fx-text-fill: #64748B;
+    -fx-font-size: 12px;
+    -fx-font-weight: 500;
+}
+
+.login-field-label {
+    -fx-text-fill: #142B3A;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.login-input-field {
+    -fx-background-color: #F8FAFC;
+    -fx-border-color: #CBD5E1;
+    -fx-border-width: 1.5px;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 9px 12px;
+    -fx-font-size: 14px;
+    -fx-text-fill: #0F172A;
+}
+
+.login-input-field:focused {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #009C9C;
+    -fx-border-width: 1.5px;
+}
+
+.login-toggle-btn {
+    -fx-background-color: #E2E8F0;
+    -fx-text-fill: #334155;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 6px;
+    -fx-padding: 9px 14px;
+    -fx-cursor: hand;
+}
+
+.login-toggle-btn:hover {
+    -fx-background-color: #CBD5E1;
+    -fx-text-fill: #0F172A;
+}
+
+.login-toggle-btn:selected {
+    -fx-background-color: #009C9C;
+    -fx-text-fill: #FFFFFF;
+}
+
+.login-submit-button {
+    -fx-background-color: #009C9C;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 12px 20px;
+    -fx-background-radius: 6px;
+    -fx-cursor: hand;
+}
+
+.login-submit-button:hover {
+    -fx-background-color: #007D7D;
+}
+
+.login-submit-button:disabled {
+    -fx-background-color: #94A3B8;
+    -fx-opacity: 0.8;
+}
+
+.login-error-box {
+    -fx-background-color: #FEF2F2;
+    -fx-border-color: #EF4444;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 10px 14px;
+}
+
+.login-error-title {
+    -fx-text-fill: #991B1B;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.login-error-text {
+    -fx-text-fill: #B91C1C;
+    -fx-font-size: 12px;
+}
+
+.login-warning-box {
+    -fx-background-color: #FFFBEB;
+    -fx-border-color: #F59E0B;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 10px 14px;
+}
+
+.login-warning-title {
+    -fx-text-fill: #92400E;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.login-warning-text {
+    -fx-text-fill: #B45309;
+    -fx-font-size: 12px;
+}
+
+.login-hint-text {
+    -fx-text-fill: #64748B;
+    -fx-font-size: 11px;
+    -fx-alignment: center;
+}
+
+.login-system-info {
+    -fx-text-fill: #94A3B8;
+    -fx-font-size: 12px;
+    -fx-font-weight: 500;
+}
+
+/* --------------------------------------------------------------------------
+   SESSION BADGE & LOGOUT BUTTONS
+   -------------------------------------------------------------------------- */
+.user-badge {
+    -fx-background-color: #12263F;
+    -fx-border-color: #1E3A5F;
+    -fx-border-width: 1px;
+    -fx-border-radius: 14px;
+    -fx-background-radius: 14px;
+    -fx-padding: 4px 12px;
+}
+
+.user-badge-icon {
+    -fx-font-size: 13px;
+    -fx-text-fill: #65E3CF;
+}
+
+.user-badge-text {
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.logout-button {
+    -fx-background-color: #B91C1C;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 6px 14px;
+    -fx-background-radius: 6px;
+    -fx-cursor: hand;
+}
+
+.logout-button:hover {
+    -fx-background-color: #991B1B;
+}
+
+.sidebar-logout-button {
+    -fx-background-color: #12263F;
+    -fx-text-fill: #F87171;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 10px 16px;
+    -fx-background-radius: 6px;
+    -fx-cursor: hand;
+}
+
+.sidebar-logout-button:hover {
+    -fx-background-color: #2D1A24;
+    -fx-text-fill: #EF4444;
+}

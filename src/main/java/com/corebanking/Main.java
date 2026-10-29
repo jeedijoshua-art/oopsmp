@@ -1,5 +1,7 @@
 package com.corebanking;
 
+import com.corebanking.auth.AuthenticationService;
+import com.corebanking.auth.AuthenticationServiceImpl;
 import com.corebanking.config.DatabaseInitializer;
 import com.corebanking.config.DatabaseConnection;
 import com.corebanking.repository.AccountRepository;
@@ -13,7 +15,9 @@ import com.corebanking.service.TransactionServiceImpl;
 import com.corebanking.service.DatabaseManagementService;
 import com.corebanking.service.DatabaseManagementServiceImpl;
 import com.corebanking.ui.AppShell;
+import com.corebanking.ui.LoginView;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
@@ -21,27 +25,56 @@ import java.sql.Connection;
 
 public final class Main extends Application {
     private Connection connection;
+    private AccountService accountService;
+    private BankService bankService;
+    private TransactionService transactionService;
+    private DatabaseManagementService dbmService;
+    private AuthenticationService authService;
 
     @Override
     public void start(Stage stage) throws Exception {
         connection = DatabaseConnection.openConnection(com.corebanking.config.AppConfig.databaseFile());
         AccountRepository accountRepository = new AccountRepository(connection);
-        AccountService accountService = new AccountServiceImpl(accountRepository, new BankRepository(connection));
-        BankService bankService = new BankServiceImpl(new BankRepository(connection));
-        TransactionService transactionService = new TransactionServiceImpl(connection, accountService);
+        accountService = new AccountServiceImpl(accountRepository, new BankRepository(connection));
+        bankService = new BankServiceImpl(new BankRepository(connection));
+        transactionService = new TransactionServiceImpl(connection, accountService);
+        dbmService = new DatabaseManagementServiceImpl(connection);
+        authService = new AuthenticationServiceImpl();
 
-        com.corebanking.service.DatabaseManagementService dbmService = new com.corebanking.service.DatabaseManagementServiceImpl(connection);
-        AppShell shell = new AppShell(connection, accountService, bankService, transactionService, dbmService);
-
-        Scene scene = new Scene(shell.build(), 1340, 840);
+        LoginView loginView = new LoginView(authService, username -> showDashboard(stage, username));
+        Scene scene = new Scene(loginView.getRoot(), 1240, 780);
         scene.getStylesheets().add(getClass().getResource("/css/application.css").toExternalForm());
 
-        stage.setTitle("VaultLedger — Core Banking Account Lifecycle & Ledger System");
+        stage.setTitle("VaultLedger — Operator Sign In");
         stage.setMinWidth(1100);
         stage.setMinHeight(720);
         stage.setScene(scene);
-        stage.setOnCloseRequest(event -> closeConnection());
+        stage.setOnCloseRequest(event -> {
+            closeConnection();
+            Platform.exit();
+            System.exit(0);
+        });
         stage.show();
+    }
+
+    private void showDashboard(Stage stage, String authenticatedUser) {
+        AppShell shell = new AppShell(
+                connection,
+                accountService,
+                bankService,
+                transactionService,
+                dbmService,
+                authenticatedUser,
+                () -> showLogin(stage)
+        );
+        stage.getScene().setRoot(shell.build());
+        stage.setTitle("VaultLedger — Core Banking Account Lifecycle & Ledger System [" + authenticatedUser + "]");
+    }
+
+    private void showLogin(Stage stage) {
+        LoginView loginView = new LoginView(authService, username -> showDashboard(stage, username));
+        stage.getScene().setRoot(loginView.getRoot());
+        stage.setTitle("VaultLedger — Operator Sign In");
     }
 
     @Override
