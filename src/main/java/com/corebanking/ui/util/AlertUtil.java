@@ -35,6 +35,15 @@ public final class AlertUtil {
         alert.showAndWait();
     }
 
+    public static void info(String title, String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        styleAlert(alert);
+        alert.showAndWait();
+    }
+
     public static boolean confirm(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION, message, ButtonType.CANCEL, ButtonType.OK);
         alert.setTitle(title);

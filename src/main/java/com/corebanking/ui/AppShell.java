@@ -22,6 +22,7 @@ import com.corebanking.service.LedgerServiceImpl;
 import com.corebanking.service.TransactionService;
 import com.corebanking.ui.util.AlertUtil;
 import com.corebanking.ui.util.FormatUtil;
+import com.corebanking.util.CsvExporter;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -56,8 +57,13 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.Window;
+
+import java.io.File;
+import java.util.function.Supplier;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -596,14 +602,15 @@ public final class AppShell {
         ComboBox<TransactionStatus> status = new ComboBox<>(FXCollections.observableArrayList(TransactionStatus.values()));
         status.setPromptText("All statuses");
         Button refresh = secondaryButton("Refresh");
-        HBox toolbar = new HBox(12, search, type, status, refresh);
+        Button exportCsv = secondaryButton("⬇ Export CSV");
+        HBox toolbar = new HBox(12, search, type, status, refresh, exportCsv);
         toolbar.getStyleClass().add("toolbar");
         HBox.setHgrow(search, Priority.ALWAYS);
         
         TableView<Transaction> table = transactionTable(List.of());
-        Runnable reload = () -> {
+        Supplier<List<Transaction>> filteredSupplier = () -> {
             String query = search.getText() == null ? "" : search.getText().trim().toLowerCase();
-            List<Transaction> filtered = transactionRepository.findAll().stream()
+            return transactionRepository.findAll().stream()
                     .filter(transaction -> query.isEmpty() || transaction.getTransactionId().toLowerCase().contains(query)
                             || String.valueOf(transaction.getFromAccount()).toLowerCase().contains(query)
                             || String.valueOf(transaction.getToAccount()).toLowerCase().contains(query)
@@ -611,6 +618,10 @@ public final class AppShell {
                     .filter(transaction -> type.getValue() == null || transaction.getTransactionType() == type.getValue())
                     .filter(transaction -> status.getValue() == null || transaction.getStatus() == status.getValue())
                     .toList();
+        };
+
+        Runnable reload = () -> {
+            List<Transaction> filtered = filteredSupplier.get();
             table.setItems(FXCollections.observableArrayList(filtered));
             table.setPlaceholder(emptyState("No transactions found", "Try adjusting your search criteria or create a new transaction.", null));
         };
@@ -618,6 +629,14 @@ public final class AppShell {
         type.valueProperty().addListener((observable, oldValue, newValue) -> reload.run());
         status.valueProperty().addListener((observable, oldValue, newValue) -> reload.run());
         refresh.setOnAction(event -> reload.run());
+        exportCsv.setOnAction(event -> {
+            List<Transaction> matching = filteredSupplier.get();
+            if (matching.isEmpty()) {
+                AlertUtil.info("No Records to Export", "There are no transactions matching your current search and filter criteria.");
+                return;
+            }
+            exportTransactionsCsv(matching, exportCsv);
+        });
         table.setOnMouseClicked(event -> { if (event.getClickCount() == 2 && table.getSelectionModel().getSelectedItem() != null) showReceipt(table.getSelectionModel().getSelectedItem(), null); });
         reload.run();
         VBox panel = panel(toolbar, table);
@@ -684,8 +703,18 @@ public final class AppShell {
         accountFilter.setPromptText("Filter by account");
         ComboBox<LedgerEntryType> type = new ComboBox<>(FXCollections.observableArrayList(LedgerEntryType.values()));
         type.setPromptText("All entries");
+        Supplier<List<LedgerEntry>> filteredLedgerSupplier = () -> {
+            String transactionQuery = transactionFilter.getText() == null ? "" : transactionFilter.getText().trim().toLowerCase();
+            String accountQuery = accountFilter.getText() == null ? "" : accountFilter.getText().trim().toLowerCase();
+            return ledgerRepository.findAll().stream()
+                    .filter(entry -> transactionQuery.isEmpty() || entry.getTransactionId().toLowerCase().contains(transactionQuery))
+                    .filter(entry -> accountQuery.isEmpty() || entry.getAccountId().toLowerCase().contains(accountQuery))
+                    .filter(entry -> type.getValue() == null || entry.getEntryType() == type.getValue()).toList();
+        };
+
         Button refreshJournal = secondaryButton("Refresh");
-        HBox journalToolbar = new HBox(12, transactionFilter, accountFilter, type, refreshJournal);
+        Button exportLedgerCsv = secondaryButton("⬇ Export CSV");
+        HBox journalToolbar = new HBox(12, transactionFilter, accountFilter, type, refreshJournal, exportLedgerCsv);
         journalToolbar.getStyleClass().add("toolbar");
         HBox.setHgrow(transactionFilter, Priority.ALWAYS);
         TableView<LedgerEntry> journalTable = ledgerTable();
@@ -709,12 +738,7 @@ public final class AppShell {
         VBox.setVgrow(journalPanel, Priority.ALWAYS);
 
         Runnable reloadJournal = () -> {
-            String transactionQuery = transactionFilter.getText() == null ? "" : transactionFilter.getText().trim().toLowerCase();
-            String accountQuery = accountFilter.getText() == null ? "" : accountFilter.getText().trim().toLowerCase();
-            List<LedgerEntry> entries = ledgerRepository.findAll().stream()
-                    .filter(entry -> transactionQuery.isEmpty() || entry.getTransactionId().toLowerCase().contains(transactionQuery))
-                    .filter(entry -> accountQuery.isEmpty() || entry.getAccountId().toLowerCase().contains(accountQuery))
-                    .filter(entry -> type.getValue() == null || entry.getEntryType() == type.getValue()).toList();
+            List<LedgerEntry> entries = filteredLedgerSupplier.get();
             journalTable.setItems(FXCollections.observableArrayList(entries));
             journalTable.setPlaceholder(emptyState("No ledger entries available", "Financial transactions will generate double-entry records here.", null));
             BigDecimal debits = entries.stream().filter(entry -> entry.getEntryType() == LedgerEntryType.DEBIT).map(LedgerEntry::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -731,6 +755,14 @@ public final class AppShell {
         accountFilter.textProperty().addListener((observable, oldValue, newValue) -> reloadJournal.run());
         type.valueProperty().addListener((observable, oldValue, newValue) -> reloadJournal.run());
         refreshJournal.setOnAction(event -> reloadJournal.run());
+        exportLedgerCsv.setOnAction(event -> {
+            List<LedgerEntry> matching = filteredLedgerSupplier.get();
+            if (matching.isEmpty()) {
+                AlertUtil.info("No Records to Export", "There are no ledger entries matching your current filter criteria.");
+                return;
+            }
+            exportLedgerCsv(matching, exportLedgerCsv);
+        });
 
         // 2. Audit & Reconciliation View components
         VBox auditPanel = new VBox(16);
@@ -862,6 +894,50 @@ public final class AppShell {
                 column("Description", entry -> valueOrDash(entry.getDescription()), 190),
                 column("Timestamp", entry -> FormatUtil.dateTime(entry.getCreatedAt()), 180));
         return table;
+    }
+
+    private void exportTransactionsCsv(List<Transaction> matching, Button sourceButton) {
+        sourceButton.setDisable(true);
+        try {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Export Transactions to CSV");
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Files (*.csv)", "*.csv"));
+            String filename = "vaultledger_transactions_" + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".csv";
+            fileChooser.setInitialFileName(filename);
+
+            Window window = sourceButton.getScene() != null ? sourceButton.getScene().getWindow() : null;
+            File targetFile = fileChooser.showSaveDialog(window);
+            if (targetFile != null) {
+                CsvExporter.writeTransactions(targetFile.toPath(), matching);
+                AlertUtil.success("Export Successful", "Successfully exported " + matching.size() + " transaction record(s) to:\n" + targetFile.getAbsolutePath());
+            }
+        } catch (Exception ex) {
+            AlertUtil.error(ex);
+        } finally {
+            sourceButton.setDisable(false);
+        }
+    }
+
+    private void exportLedgerCsv(List<LedgerEntry> matching, Button sourceButton) {
+        sourceButton.setDisable(true);
+        try {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Export Double-Entry Ledger to CSV");
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Files (*.csv)", "*.csv"));
+            String filename = "vaultledger_ledger_" + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".csv";
+            fileChooser.setInitialFileName(filename);
+
+            Window window = sourceButton.getScene() != null ? sourceButton.getScene().getWindow() : null;
+            File targetFile = fileChooser.showSaveDialog(window);
+            if (targetFile != null) {
+                CsvExporter.writeLedger(targetFile.toPath(), matching);
+                AlertUtil.success("Export Successful", "Successfully exported " + matching.size() + " ledger record(s) to:\n" + targetFile.getAbsolutePath());
+            }
+        } catch (Exception ex) {
+            AlertUtil.error(ex);
+        } finally {
+            sourceButton.setDisable(false);
+        }
     }
 
     private void showTransactionDialog(TransactionType transactionType, String presetAccount,
