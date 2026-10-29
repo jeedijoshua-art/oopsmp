@@ -5,6 +5,7 @@ import com.corebanking.enums.AccountType;
 import com.corebanking.exception.DataAccessException;
 import com.corebanking.model.Account;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -23,7 +24,7 @@ public final class AccountRepository {
 
     public void save(Account account) {
         String sql = "INSERT INTO accounts (account_id, customer_name, age, email, phone_number, bank_id, account_type, "
-                + "balance, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                + "balance, initial_balance, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             bindAccount(statement, account);
             statement.executeUpdate();
@@ -33,7 +34,7 @@ public final class AccountRepository {
     }
 
     public Optional<Account> findById(String accountId) {
-        String sql = "SELECT account_id, customer_name, age, email, phone_number, bank_id, account_type, balance, status, "
+        String sql = "SELECT account_id, customer_name, age, email, phone_number, bank_id, account_type, balance, initial_balance, status, "
                 + "created_at, updated_at FROM accounts WHERE account_id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, accountId);
@@ -46,7 +47,7 @@ public final class AccountRepository {
     }
 
     public List<Account> findAll() {
-        String sql = "SELECT account_id, customer_name, age, email, phone_number, bank_id, account_type, balance, status, "
+        String sql = "SELECT account_id, customer_name, age, email, phone_number, bank_id, account_type, balance, initial_balance, status, "
             + "created_at, updated_at FROM accounts WHERE account_id <> 'SYSTEM-CASH' ORDER BY account_id";
         try (PreparedStatement statement = connection.prepareStatement(sql);
              ResultSet resultSet = statement.executeQuery()) {
@@ -155,17 +156,28 @@ public final class AccountRepository {
         statement.setLong(6, account.getBankId());
         statement.setString(7, account.getAccountType().name());
         statement.setString(8, account.getBalance().toPlainString());
-        statement.setString(9, account.getStatus().name());
-        statement.setString(10, JdbcValueMapper.writeDateTime(account.getCreatedAt()));
-        statement.setString(11, JdbcValueMapper.writeDateTime(account.getUpdatedAt()));
+        statement.setString(9, (account.getInitialBalance() != null ? account.getInitialBalance() : account.getBalance()).toPlainString());
+        statement.setString(10, account.getStatus().name());
+        statement.setString(11, JdbcValueMapper.writeDateTime(account.getCreatedAt()));
+        statement.setString(12, JdbcValueMapper.writeDateTime(account.getUpdatedAt()));
     }
 
     private Account mapRow(ResultSet resultSet) throws SQLException {
         Integer age = resultSet.getObject("age") != null ? resultSet.getInt("age") : null;
+        BigDecimal balance = JdbcValueMapper.readMoney(resultSet, "balance");
+        BigDecimal initialBalance = null;
+        try {
+            initialBalance = JdbcValueMapper.readMoney(resultSet, "initial_balance");
+        } catch (SQLException ignored) {
+            // column might not be present if custom query didn't include it
+        }
+        if (initialBalance == null) {
+            initialBalance = balance;
+        }
         return new Account(resultSet.getString("account_id"), resultSet.getString("customer_name"),
                 age, resultSet.getString("email"), resultSet.getString("phone_number"),
                 resultSet.getLong("bank_id"), AccountType.valueOf(resultSet.getString("account_type")),
-                JdbcValueMapper.readMoney(resultSet, "balance"),
+                balance, initialBalance,
                 AccountStatus.valueOf(resultSet.getString("status")),
                 JdbcValueMapper.readDateTime(resultSet, "created_at"),
                 JdbcValueMapper.readDateTime(resultSet, "updated_at"));

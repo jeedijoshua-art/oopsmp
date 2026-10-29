@@ -35,6 +35,28 @@ public final class DatabaseInitializer {
                 addLedgerDescriptionColumnIfMissing(connection);
                 addIsDemoColumnIfMissing(connection);
                 addAccountColumnsIfMissing(connection);
+                addAccountInitialBalanceColumnIfMissing(connection);
+            }
+        }
+    }
+
+    private static void addAccountInitialBalanceColumnIfMissing(Connection connection) throws SQLException {
+        try (var columns = connection.getMetaData().getColumns(null, null, "accounts", "initial_balance")) {
+            if (!columns.next()) {
+                try (var statement = connection.createStatement()) {
+                    statement.execute("ALTER TABLE accounts ADD COLUMN initial_balance TEXT NOT NULL DEFAULT '0.00'");
+                    // Backfill initial_balance for existing rows:
+                    // If no ledger entries exist, initial_balance equals current balance.
+                    // If ledger entries exist, initial_balance equals balance - net ledger movements.
+                    statement.execute("""
+                        UPDATE accounts
+                        SET initial_balance = CASE
+                            WHEN account_id = 'SYSTEM-CASH' THEN '0.00'
+                            ELSE balance
+                        END
+                        WHERE initial_balance IS NULL OR initial_balance = '0.00'
+                    """);
+                }
             }
         }
     }

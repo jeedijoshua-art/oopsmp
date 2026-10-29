@@ -877,3 +877,29 @@
 .banking-alert .button:hover {
     -fx-background-color: #007D7D;
 }
+
+/* --------------------------------------------------------------------------
+   AUDIT & RECONCILIATION STYLING
+   -------------------------------------------------------------------------- */
+.audit-callout-success {
+    -fx-background-color: #E6F4EA;
+    -fx-border-color: #16794B;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 12 16;
+}
+
+.audit-callout-danger {
+    -fx-background-color: #FCE8E6;
+    -fx-border-color: #C62828;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 12 16;
+}
+
+.audit-callout-text {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}

@@ -3,15 +3,22 @@ package com.corebanking.service;
 import com.corebanking.enums.LedgerEntryType;
 import com.corebanking.enums.TransactionType;
 import com.corebanking.exception.DataAccessException;
+import com.corebanking.model.Account;
+import com.corebanking.model.AccountReconciliationRecord;
 import com.corebanking.model.LedgerEntry;
+import com.corebanking.model.ReconciliationReport;
 import com.corebanking.model.Transaction;
 import com.corebanking.repository.LedgerRepository;
 import com.corebanking.repository.TransactionRepository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public final class LedgerServiceImpl implements LedgerService {
     public static final String SYSTEM_CASH_ACCOUNT_ID = "SYSTEM-CASH";
@@ -84,6 +91,101 @@ public final class LedgerServiceImpl implements LedgerService {
     @Override
     public BigDecimal totalCredits(String transactionId) {
         return total(transactionId, LedgerEntryType.CREDIT);
+    }
+
+    @Override
+    public ReconciliationReport generateReconciliationReport(List<Account> accounts, Function<Long, String> bankNameLookup) {
+        List<LedgerEntry> allEntries = ledgerRepository.findAll();
+
+        BigDecimal totalDebits = allEntries.stream()
+                .filter(e -> e.getEntryType() == LedgerEntryType.DEBIT)
+                .map(LedgerEntry::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalCredits = allEntries.stream()
+                .filter(e -> e.getEntryType() == LedgerEntryType.CREDIT)
+                .map(LedgerEntry::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Group by transaction to detect unbalanced transactions
+        Map<String, List<LedgerEntry>> byTransaction = allEntries.stream()
+                .collect(Collectors.groupingBy(LedgerEntry::getTransactionId));
+
+        List<String> unbalancedTransactions = new ArrayList<>();
+        for (Map.Entry<String, List<LedgerEntry>> entry : byTransaction.entrySet()) {
+            BigDecimal debits = entry.getValue().stream()
+                    .filter(e -> e.getEntryType() == LedgerEntryType.DEBIT)
+                    .map(LedgerEntry::getAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal credits = entry.getValue().stream()
+                    .filter(e -> e.getEntryType() == LedgerEntryType.CREDIT)
+                    .map(LedgerEntry::getAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            if (debits.compareTo(credits) != 0) {
+                unbalancedTransactions.add(entry.getKey());
+            }
+        }
+
+        boolean isJournalBalanced = totalDebits.compareTo(totalCredits) == 0 && unbalancedTransactions.isEmpty();
+
+        // Group entries by account for account reconciliation
+        Map<String, List<LedgerEntry>> byAccount = allEntries.stream()
+                .collect(Collectors.groupingBy(LedgerEntry::getAccountId));
+
+        List<AccountReconciliationRecord> accountRecords = new ArrayList<>();
+        int discrepancies = 0;
+
+        List<Account> targetAccounts = accounts != null ? accounts : List.of();
+        for (Account account : targetAccounts) {
+            String accId = account.getAccountId();
+            List<LedgerEntry> accEntries = byAccount.getOrDefault(accId, List.of());
+
+            BigDecimal accDebits = accEntries.stream()
+                    .filter(e -> e.getEntryType() == LedgerEntryType.DEBIT)
+                    .map(LedgerEntry::getAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal accCredits = accEntries.stream()
+                    .filter(e -> e.getEntryType() == LedgerEntryType.CREDIT)
+                    .map(LedgerEntry::getAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal initialBalance = account.getInitialBalance() != null ? account.getInitialBalance() : BigDecimal.ZERO;
+            BigDecimal ledgerDerivedBalance = initialBalance.add(accCredits).subtract(accDebits);
+            BigDecimal actualBalance = account.getBalance();
+            BigDecimal discrepancy = actualBalance.subtract(ledgerDerivedBalance);
+            boolean isReconciled = discrepancy.compareTo(BigDecimal.ZERO) == 0;
+
+            if (!isReconciled) {
+                discrepancies++;
+            }
+
+            String bankName = bankNameLookup != null ? bankNameLookup.apply(account.getBankId()) : "-";
+            accountRecords.add(new AccountReconciliationRecord(
+                    accId,
+                    account.getCustomerName(),
+                    bankName,
+                    initialBalance,
+                    accDebits,
+                    accCredits,
+                    ledgerDerivedBalance,
+                    actualBalance,
+                    discrepancy,
+                    isReconciled
+            ));
+        }
+
+        boolean isFullyReconciled = isJournalBalanced && discrepancies == 0;
+
+        return new ReconciliationReport(
+                totalDebits,
+                totalCredits,
+                isJournalBalanced,
+                unbalancedTransactions,
+                accountRecords,
+                isFullyReconciled,
+                discrepancies
+        );
     }
 
     private BigDecimal total(String transactionId, LedgerEntryType type) {

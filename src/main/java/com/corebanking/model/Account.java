@@ -17,12 +17,13 @@ public final class Account {
     private final Long bankId;
     private final AccountType accountType;
     private final BigDecimal balance;
+    private final BigDecimal initialBalance;
     private final AccountStatus status;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
 
     public Account(String accountId, String customerName, Integer age, String email, String phoneNumber, Long bankId, AccountType accountType,
-                   BigDecimal balance, AccountStatus status, LocalDateTime createdAt,
+                   BigDecimal balance, BigDecimal initialBalance, AccountStatus status, LocalDateTime createdAt,
                    LocalDateTime updatedAt) {
         this.accountId = requireText(accountId, "Account ID");
         this.customerName = requireText(customerName, "Customer name");
@@ -35,9 +36,16 @@ public final class Account {
         this.bankId = bankId;
         this.accountType = Objects.requireNonNull(accountType, "Account type is required.");
         this.balance = MoneyUtil.requireNonNegative(balance);
+        this.initialBalance = initialBalance != null ? MoneyUtil.requireNonNegative(initialBalance) : this.balance;
         this.status = Objects.requireNonNull(status, "Account status is required.");
         this.createdAt = Objects.requireNonNull(createdAt, "Created time is required.");
         this.updatedAt = Objects.requireNonNull(updatedAt, "Updated time is required.");
+    }
+
+    public Account(String accountId, String customerName, Integer age, String email, String phoneNumber, Long bankId, AccountType accountType,
+                   BigDecimal balance, AccountStatus status, LocalDateTime createdAt,
+                   LocalDateTime updatedAt) {
+        this(accountId, customerName, age, email, phoneNumber, bankId, accountType, balance, balance, status, createdAt, updatedAt);
     }
 
     public Account(String accountId, String customerName, Integer age, String email, String phoneNumber, Long bankId, AccountType accountType,
@@ -83,6 +91,10 @@ public final class Account {
 
     public BigDecimal getBalance() {
         return balance;
+    }
+
+    public BigDecimal getInitialBalance() {
+        return initialBalance;
     }
 
     public AccountStatus getStatus() {

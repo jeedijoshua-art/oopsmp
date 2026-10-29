@@ -6,8 +6,10 @@ import com.corebanking.enums.LedgerEntryType;
 import com.corebanking.enums.TransactionStatus;
 import com.corebanking.enums.TransactionType;
 import com.corebanking.model.Account;
+import com.corebanking.model.AccountReconciliationRecord;
 import com.corebanking.model.Bank;
 import com.corebanking.model.LedgerEntry;
+import com.corebanking.model.ReconciliationReport;
 import com.corebanking.model.Transaction;
 import com.corebanking.repository.AccountRepository;
 import com.corebanking.repository.BankRepository;
@@ -15,6 +17,8 @@ import com.corebanking.repository.LedgerRepository;
 import com.corebanking.repository.TransactionRepository;
 import com.corebanking.service.AccountService;
 import com.corebanking.service.BankService;
+import com.corebanking.service.LedgerService;
+import com.corebanking.service.LedgerServiceImpl;
 import com.corebanking.service.TransactionService;
 import com.corebanking.ui.util.AlertUtil;
 import com.corebanking.ui.util.FormatUtil;
@@ -70,6 +74,7 @@ public final class AppShell {
     private final BankRepository bankRepository;
     private final TransactionRepository transactionRepository;
     private final LedgerRepository ledgerRepository;
+    private final LedgerService ledgerService;
     private final com.corebanking.service.DatabaseManagementService dbmService;
     private final BorderPane root = new BorderPane();
     private final StackPane content = new StackPane();
@@ -86,6 +91,7 @@ public final class AppShell {
         this.bankRepository = new BankRepository(connection);
         this.transactionRepository = new TransactionRepository(connection);
         this.ledgerRepository = new LedgerRepository(connection);
+        this.ledgerService = new LedgerServiceImpl(this.ledgerRepository, this.transactionRepository);
         this.dbmService = Objects.requireNonNull(dbmService);
     }
 
@@ -653,47 +659,67 @@ public final class AppShell {
     }
 
     private void showLedger() {
-        setSection("Ledger", "Double-entry records with debit and credit verification");
+        setSection("Ledger & Reconciliation", "Double-entry records with mathematical audit verification");
         VBox page = page();
+
+        ToggleButton journalViewBtn = new ToggleButton("Double-Entry Journal");
+        journalViewBtn.getStyleClass().addAll("toggle-button", "button");
+        ToggleButton auditViewBtn = new ToggleButton("Integrity & Audit Reconciliation");
+        auditViewBtn.getStyleClass().addAll("toggle-button", "button");
+        ToggleGroup viewGroup = new ToggleGroup();
+        journalViewBtn.setToggleGroup(viewGroup);
+        auditViewBtn.setToggleGroup(viewGroup);
+        journalViewBtn.setSelected(true);
+
+        HBox viewSwitch = new HBox(8, journalViewBtn, auditViewBtn);
+        viewSwitch.getStyleClass().add("toolbar");
+        viewSwitch.setAlignment(Pos.CENTER_LEFT);
+
+        StackPane viewContainer = new StackPane();
+
+        // 1. Journal View components
         TextField transactionFilter = new TextField();
         transactionFilter.setPromptText("Filter by transaction ID");
         TextField accountFilter = new TextField();
         accountFilter.setPromptText("Filter by account");
         ComboBox<LedgerEntryType> type = new ComboBox<>(FXCollections.observableArrayList(LedgerEntryType.values()));
         type.setPromptText("All entries");
-        Button refresh = secondaryButton("Refresh");
-        HBox toolbar = new HBox(12, transactionFilter, accountFilter, type, refresh);
-        toolbar.getStyleClass().add("toolbar");
+        Button refreshJournal = secondaryButton("Refresh");
+        HBox journalToolbar = new HBox(12, transactionFilter, accountFilter, type, refreshJournal);
+        journalToolbar.getStyleClass().add("toolbar");
         HBox.setHgrow(transactionFilter, Priority.ALWAYS);
-        TableView<LedgerEntry> table = ledgerTable();
-        
+        TableView<LedgerEntry> journalTable = ledgerTable();
+
         HBox totalsBox = new HBox(16);
         totalsBox.getStyleClass().add("ledger-total");
         totalsBox.setAlignment(Pos.CENTER_LEFT);
-        
+
         Label debitLabel = new Label();
         debitLabel.getStyleClass().add("ledger-total-text");
         Label creditLabel = new Label();
         creditLabel.getStyleClass().add("ledger-total-text");
         Label balanceBadge = new Label();
         balanceBadge.getStyleClass().add("badge");
-        
+
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         totalsBox.getChildren().addAll(debitLabel, new Separator(), creditLabel, spacer, balanceBadge);
 
-        Runnable reload = () -> {
+        VBox journalPanel = panel(journalToolbar, journalTable, totalsBox);
+        VBox.setVgrow(journalPanel, Priority.ALWAYS);
+
+        Runnable reloadJournal = () -> {
             String transactionQuery = transactionFilter.getText() == null ? "" : transactionFilter.getText().trim().toLowerCase();
             String accountQuery = accountFilter.getText() == null ? "" : accountFilter.getText().trim().toLowerCase();
             List<LedgerEntry> entries = ledgerRepository.findAll().stream()
                     .filter(entry -> transactionQuery.isEmpty() || entry.getTransactionId().toLowerCase().contains(transactionQuery))
                     .filter(entry -> accountQuery.isEmpty() || entry.getAccountId().toLowerCase().contains(accountQuery))
                     .filter(entry -> type.getValue() == null || entry.getEntryType() == type.getValue()).toList();
-            table.setItems(FXCollections.observableArrayList(entries));
-            table.setPlaceholder(emptyState("No ledger entries available", "Financial transactions will generate double-entry records here.", null));
+            journalTable.setItems(FXCollections.observableArrayList(entries));
+            journalTable.setPlaceholder(emptyState("No ledger entries available", "Financial transactions will generate double-entry records here.", null));
             BigDecimal debits = entries.stream().filter(entry -> entry.getEntryType() == LedgerEntryType.DEBIT).map(LedgerEntry::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
             BigDecimal credits = entries.stream().filter(entry -> entry.getEntryType() == LedgerEntryType.CREDIT).map(LedgerEntry::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
-            
+
             debitLabel.setText("Total Debits: " + FormatUtil.money(debits));
             creditLabel.setText("Total Credits: " + FormatUtil.money(credits));
             boolean balanced = debits.compareTo(credits) == 0;
@@ -701,15 +727,122 @@ public final class AppShell {
             balanceBadge.getStyleClass().removeAll("ledger-badge-balanced", "ledger-badge-unbalanced");
             balanceBadge.getStyleClass().add(balanced ? "ledger-badge-balanced" : "ledger-badge-unbalanced");
         };
-        transactionFilter.textProperty().addListener((observable, oldValue, newValue) -> reload.run());
-        accountFilter.textProperty().addListener((observable, oldValue, newValue) -> reload.run());
-        type.valueProperty().addListener((observable, oldValue, newValue) -> reload.run());
-        refresh.setOnAction(event -> reload.run());
-        reload.run();
-        VBox panel = panel(toolbar, table, totalsBox);
-        VBox.setVgrow(panel, Priority.ALWAYS);
-        page.getChildren().add(panel);
+        transactionFilter.textProperty().addListener((observable, oldValue, newValue) -> reloadJournal.run());
+        accountFilter.textProperty().addListener((observable, oldValue, newValue) -> reloadJournal.run());
+        type.valueProperty().addListener((observable, oldValue, newValue) -> reloadJournal.run());
+        refreshJournal.setOnAction(event -> reloadJournal.run());
+
+        // 2. Audit & Reconciliation View components
+        VBox auditPanel = new VBox(16);
+        auditPanel.setFillWidth(true);
+
+        viewGroup.selectedToggleProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal == auditViewBtn) {
+                renderAuditPanel(auditPanel);
+                viewContainer.getChildren().setAll(auditPanel);
+            } else {
+                if (newVal == null) {
+                    journalViewBtn.setSelected(true);
+                    return;
+                }
+                reloadJournal.run();
+                viewContainer.getChildren().setAll(journalPanel);
+            }
+        });
+
+        reloadJournal.run();
+        viewContainer.getChildren().setAll(journalPanel);
+        VBox.setVgrow(viewContainer, Priority.ALWAYS);
+
+        page.getChildren().addAll(viewSwitch, viewContainer);
         show(page);
+    }
+
+    private void renderAuditPanel(VBox auditPanel) {
+        auditPanel.getChildren().clear();
+        ReconciliationReport report = ledgerService.generateReconciliationReport(accountService.listAccounts(), this::bankName);
+
+        HBox auditStats = new HBox(16,
+                statCard("TOTAL DEBITS", FormatUtil.money(report.totalDebits()), "Sum of all ledger debits"),
+                statCard("TOTAL CREDITS", FormatUtil.money(report.totalCredits()), "Sum of all ledger credits"),
+                statCard("JOURNAL INVARIANT", report.isJournalBalanced() ? "BALANCED" : "UNBALANCED", "Debits equal Credits"),
+                statCard("AUDIT STATUS", report.isFullyReconciled() ? "RECONCILED" : report.discrepancyCount() + " DISCREPANCIES", "Account vs Ledger"));
+        auditStats.getStyleClass().add("stat-row");
+
+        VBox alertBox = new VBox(8);
+        if (!report.isJournalBalanced()) {
+            Label unbalWarn = new Label("⚠ CRITICAL JOURNAL INVARIANT FAILURE: Overall Debits do not equal Credits, or "
+                    + report.unbalancedTransactions().size() + " transaction(s) have unbalanced legs: "
+                    + String.join(", ", report.unbalancedTransactions()));
+            unbalWarn.getStyleClass().addAll("audit-callout-text", "badge-danger");
+            unbalWarn.setWrapText(true);
+            HBox warnRow = new HBox(unbalWarn);
+            warnRow.getStyleClass().add("audit-callout-danger");
+            alertBox.getChildren().add(warnRow);
+        }
+        if (report.hasDiscrepancies()) {
+            Label discWarn = new Label("⚠ RECONCILIATION DISCREPANCY: " + report.discrepancyCount()
+                    + " account(s) have balances that do not match their calculated ledger history (Opening Balance + Credits - Debits).");
+            discWarn.getStyleClass().addAll("audit-callout-text", "badge-danger");
+            discWarn.setWrapText(true);
+            HBox warnRow = new HBox(discWarn);
+            warnRow.getStyleClass().add("audit-callout-danger");
+            alertBox.getChildren().add(warnRow);
+        }
+        if (report.isFullyReconciled()) {
+            Label successNotice = new Label("✔ GENERAL LEDGER AUDIT PASSED: 100% of journal transactions are balanced and all account balances strictly reconcile with their immutable double-entry history.");
+            successNotice.getStyleClass().addAll("audit-callout-text", "badge-success");
+            successNotice.setWrapText(true);
+            HBox successRow = new HBox(successNotice);
+            successRow.getStyleClass().add("audit-callout-success");
+            alertBox.getChildren().add(successRow);
+        }
+
+        TableView<AccountReconciliationRecord> reconTable = new TableView<>(FXCollections.observableArrayList(report.accountReconciliations()));
+        reconTable.getStyleClass().add("data-table");
+        reconTable.getColumns().addAll(
+                column("Account ID", AccountReconciliationRecord::accountId, 130),
+                column("Customer", AccountReconciliationRecord::customerName, 150),
+                column("Bank", AccountReconciliationRecord::bankName, 130),
+                moneyColumn("Opening Balance", AccountReconciliationRecord::initialBalance, 130),
+                moneyColumn("Total Debits", AccountReconciliationRecord::totalDebits, 120),
+                moneyColumn("Total Credits", AccountReconciliationRecord::totalCredits, 120),
+                moneyColumn("Ledger Balance", AccountReconciliationRecord::ledgerDerivedBalance, 130),
+                moneyColumn("Actual Balance", AccountReconciliationRecord::actualBalance, 130),
+                moneyColumn("Discrepancy", AccountReconciliationRecord::discrepancy, 120),
+                reconciledStatusColumn());
+        reconTable.setPlaceholder(emptyState("No customer accounts found", "Create customer accounts to run the reconciliation audit.", null));
+
+        Button refreshAuditBtn = secondaryButton("Re-Run Audit");
+        refreshAuditBtn.setOnAction(e -> renderAuditPanel(auditPanel));
+        HBox auditActionBox = new HBox(refreshAuditBtn);
+        auditActionBox.setAlignment(Pos.CENTER_RIGHT);
+
+        VBox reconCard = panel(sectionLabel("Account Balance Reconciliation"), alertBox, reconTable, auditActionBox);
+        VBox.setVgrow(reconCard, Priority.ALWAYS);
+        auditPanel.getChildren().addAll(auditStats, reconCard);
+    }
+
+    private TableColumn<AccountReconciliationRecord, String> reconciledStatusColumn() {
+        TableColumn<AccountReconciliationRecord, String> column = new TableColumn<>("Audit Status");
+        column.setPrefWidth(130);
+        column.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getTableRow() == null || getTableRow().getItem() == null) {
+                    setText(null);
+                    setGraphic(null);
+                } else {
+                    AccountReconciliationRecord record = getTableRow().getItem();
+                    Label badge = new Label(record.isReconciled() ? "RECONCILED" : "DISCREPANCY");
+                    badge.getStyleClass().addAll("badge", record.isReconciled() ? "badge-success" : "badge-danger");
+                    setGraphic(badge);
+                    setText(null);
+                }
+            }
+        });
+        return column;
     }
 
     private TableView<LedgerEntry> ledgerTable() {
@@ -1006,13 +1139,65 @@ public final class AppShell {
         receipt.getChildren().addAll(
                 receiptRow("Transaction ID", transaction.getTransactionId()),
                 receiptRow("Date / Time", FormatUtil.dateTime(transaction.getCreatedAt())),
-                receiptRow("Type", transaction.getTransactionType().name()),
-                receiptRow("From Account", valueOrDash(transaction.getFromAccount())),
-                receiptRow("To Account", valueOrDash(transaction.getToAccount())),
-                receiptRow("Amount", FormatUtil.money(transaction.getAmount())),
+                receiptRow("Type", transaction.getTransactionType().name()));
+
+        if (transaction.getTransactionType() == TransactionType.DEPOSIT) {
+            String toAccId = transaction.getToAccount();
+            Account toAcc = null;
+            try { toAcc = accountService.findAccount(toAccId); } catch (Exception ignored) {}
+            String bankInfo = toAcc != null ? bankName(toAcc.getBankId()) : "-";
+            String customerInfo = toAcc != null ? toAcc.getCustomerName() : "-";
+            receipt.getChildren().addAll(
+                    receiptRow("Deposited To", toAccId + " (" + customerInfo + ")"),
+                    receiptRow("Bank", bankInfo),
+                    receiptRow("Deposit Amount", FormatUtil.money(transaction.getAmount())));
+            if (toAcc != null) {
+                receipt.getChildren().add(receiptRow("Confirmed Balance", FormatUtil.money(toAcc.getBalance())));
+            }
+        } else if (transaction.getTransactionType() == TransactionType.WITHDRAWAL) {
+            String fromAccId = transaction.getFromAccount();
+            Account fromAcc = null;
+            try { fromAcc = accountService.findAccount(fromAccId); } catch (Exception ignored) {}
+            String bankInfo = fromAcc != null ? bankName(fromAcc.getBankId()) : "-";
+            String customerInfo = fromAcc != null ? fromAcc.getCustomerName() : "-";
+            receipt.getChildren().addAll(
+                    receiptRow("Withdrawn From", fromAccId + " (" + customerInfo + ")"),
+                    receiptRow("Bank", bankInfo),
+                    receiptRow("Withdrawal Amount", FormatUtil.money(transaction.getAmount())));
+            if (fromAcc != null) {
+                receipt.getChildren().add(receiptRow("Confirmed Balance", FormatUtil.money(fromAcc.getBalance())));
+            }
+        } else { // TRANSFER
+            String fromAccId = transaction.getFromAccount();
+            String toAccId = transaction.getToAccount();
+            Account fromAcc = null;
+            Account toAcc = null;
+            try { fromAcc = accountService.findAccount(fromAccId); } catch (Exception ignored) {}
+            try { toAcc = accountService.findAccount(toAccId); } catch (Exception ignored) {}
+
+            boolean isInterBank = fromAcc != null && toAcc != null && !fromAcc.getBankId().equals(toAcc.getBankId());
+            String scope = isInterBank
+                    ? "Inter-Bank Transfer (" + bankName(fromAcc.getBankId()) + " → " + bankName(toAcc.getBankId()) + ")"
+                    : "Intra-Bank Transfer (" + (fromAcc != null ? bankName(fromAcc.getBankId()) : "Same Bank") + ")";
+
+            receipt.getChildren().addAll(
+                    receiptRow("Transfer Scope", scope),
+                    receiptRow("From Account", fromAccId + " (" + (fromAcc != null ? fromAcc.getCustomerName() : "-") + ")"),
+                    receiptRow("To Account", toAccId + " (" + (toAcc != null ? toAcc.getCustomerName() : "-") + ")"),
+                    receiptRow("Transfer Amount", FormatUtil.money(transaction.getAmount())));
+
+            if (fromAcc != null) {
+                receipt.getChildren().add(receiptRow("Sender Balance", FormatUtil.money(fromAcc.getBalance())));
+            }
+            if (toAcc != null) {
+                receipt.getChildren().add(receiptRow("Recipient Balance", FormatUtil.money(toAcc.getBalance())));
+            }
+        }
+
+        receipt.getChildren().addAll(
                 receiptRow("Status", transaction.getStatus().name()),
                 receiptRow("Description", valueOrDash(transaction.getDescription())));
-        Label success = new Label("SUCCESS");
+        Label success = new Label("SUCCESS — COMMITTED");
         success.getStyleClass().add("receipt-success");
         Button close = primaryButton("Close Receipt");
         close.setOnAction(event -> dialog.close());

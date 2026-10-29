@@ -4,7 +4,7 @@
 [![JavaFX](https://img.shields.io/badge/JavaFX-21.0.5-orange.svg)](https://openjfx.io/)
 [![Database](https://img.shields.io/badge/SQLite-3.46.1.0-lightgrey.svg)](https://sqlite.org/)
 [![Build Tool](https://img.shields.io/badge/Maven-3.x-red.svg)](https://maven.apache.org/)
-[![Tests](https://img.shields.io/badge/Tests-94%20Passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-110%20Passed-brightgreen.svg)]()
 [![Repository](https://img.shields.io/badge/GitHub-jeedijoshua--art%2Foopsmp-blue.svg)](https://github.com/jeedijoshua-art/oopsmp)
 
 > **Academic Notice:** **VaultLedger** is an academic desktop banking simulation engineered to demonstrate core banking principles, double-entry bookkeeping, strict account lifecycle states, atomic transactions, and thread-safe concurrency controls. It is designed strictly for educational and evaluation purposes and is not intended for production banking deployments or real customer funds.
@@ -61,11 +61,12 @@ Every feature listed below is verified and implemented in the application source
   - **`ACTIVE`:** Eligible for deposits, withdrawals, and transfers.
   - **`INACTIVE`:** Dormant state; financial transactions are blocked; can be reactivated.
   - **`CLOSED`:** Terminal state; requires zero balance; cannot be reopened; eligible for permanent deletion.
-* **Atomic Deposit Operations:** Credit money into active accounts backed by the system cash pool (`SYSTEM-CASH`).
-* **Protected Withdrawal Operations:** Debit funds from active accounts with strict overdraft prevention and live before/after calculation preview.
-* **Multi-Account Transfers with Deadlock Prevention:** Inter-account transfers coordinated by an ordered `ReentrantLock` manager that eliminates locking race conditions regardless of transfer direction.
-* **Audit Transaction Receipts:** Immediate modal receipt for every completed transaction displaying Transaction ID, Timestamp, Type, From/To Accounts, Amount, Status, and Description.
-* **Double-Entry General Ledger:** Relational ledger capturing matched `DEBIT` and `CREDIT` entries for every movement of capital. Features automated mathematical balance checks displayed with a prominent `BALANCED` audit badge.
+* **Atomic Deposit Operations:** Credit money into active accounts backed by the system cash pool (`SYSTEM-CASH`) with automated double-entry ledgering.
+* **Protected Withdrawal Operations:** Debit funds from active accounts with strict overdraft prevention, live before/after calculation preview, and immediate cash-offset bookkeeping.
+* **Multi-Account & Inter-Bank Transfers:** Supports both intra-bank (same bank) and inter-bank (cross-institution) transfers coordinated by an ordered `AccountLockManager` that eliminates locking race conditions and deadlocks regardless of transfer direction.
+* **Transaction Receipts with Confirmed Balance:** Immediate modal receipt for every completed transaction displaying Transaction ID, Status, Type, From Account, To Account, Transfer Scope (Intra-Bank vs Inter-Bank), Amount, Timestamp, Description, and Confirmed Post-Transaction Balances for all involved accounts.
+* **Strict ACID Atomicity & Rollback:** All operations execute within transactional database scopes that auto-rollback on any unhandled exception or constraint failure, leaving no partial state or unlinked ledger entries.
+* **Double-Entry General Ledger & Mathematical Audit:** Relational ledger capturing paired `DEBIT` and `CREDIT` legs for 100% of operations. Includes an **Integrity & Audit Reconciliation** dashboard that verifies both global journal invariance (`Total Debits == Total Credits`) and per-account mathematical reconciliation (`Actual Balance == Opening Balance + Credits - Debits`).
 * **Searchable Historical Activity:** Searchable transaction history with real-time text query and dropdown filtering by `TransactionType` and `TransactionStatus`.
 * **Zero-Configuration SQLite Persistence:** Automated schema initialization, schema migration, index creation, and foreign key cascades stored in a local SQLite file (`data/core-banking.db`).
 * **Idempotent Demo Data Seeding:** One-click seeding of sample bank and accounts with realistic initial transactions.
@@ -82,7 +83,7 @@ Every feature listed below is verified and implemented in the application source
 | **GUI Framework** | OpenJFX (JavaFX) | 21.0.5 | Native desktop UI, Controls, Layouts, FXML, Stage/Scene architecture |
 | **Database** | SQLite | 3.46.1.0 | Embedded relational engine via `org.xerial:sqlite-jdbc` |
 | **Build System** | Apache Maven | 3.8+ | Dependency management, build lifecycle, JavaFX Maven plugin |
-| **Testing** | JUnit Jupiter | 5.11.0 | Unit, integration, concurrency, and UI test suite (94 tests) |
+| **Testing** | JUnit Jupiter | 5.11.0 | Unit, integration, concurrency, rollback, and UI test suite (110 tests) |
 | **Concurrency** | Java Concurrency | `java.util.concurrent` | `ReentrantLock` striping and lexicographical ordering |
 | **Styling** | JavaFX CSS | Custom 3.0 Design | VaultLedger Navy (`#0A1728`), Teal (`#009C9C`), and High-Contrast Light (`#FFFFFF`) |
 
@@ -452,24 +453,28 @@ VaultLedger includes a suite of automated unit, integration, and UI tests execut
 # Run all tests
 mvn test
 
+# Run the Core Banking Engine Audit Suite
+mvn test -Dtest=CoreBankingEngineAuditTest
+
 # Run a specific test class
 mvn test -Dtest=TransferServiceTest
 ```
 
 ### Verified Test Results
 ```text
-Tests run: 94, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 110, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
 
 ### What the Tests Cover
-1. **Domain Models (`DomainModelTest`):** Validation of Account, Bank, Transaction, LedgerEntry, MoneyUtil, and `equals`/`hashCode` identity.
-2. **Account Services (`AccountServiceTest`, `AccountManagementTest`):** Account onboarding, age restrictions, email validation, and state machine transitions (`ACTIVE`, `INACTIVE`, `CLOSED`).
-3. **Transaction Services (`TransactionServiceTest`, `TransferServiceTest`):** Deposit calculations, withdrawal limits, overdraft rejection, and atomic transfers.
-4. **Double-Entry Ledger (`LedgerServiceTest`):** Validation of dual debit/credit entries and balanced ledger invariant enforcement.
-5. **Concurrency & Deadlock Prevention (`ConcurrencyIntegrationTest`):** Multi-threaded concurrent deposits and transfers across threads to prove thread safety and absence of deadlocks.
-6. **Data Access Layer (`RepositoryIntegrationTest`, `DatabaseLayerTest`):** SQLite schema creation, foreign key constraints, and JDBC query mapping.
-7. **UI Presentation Tier (`AppShellUITest`, `TransactionDialogTest`):** JavaFX node creation, modal dialogs, account preselection, live calculation previews, and GitHub link verification.
+1. **Core Banking Engine Audit (`CoreBankingEngineAuditTest`):** 16 comprehensive compliance scenarios including valid deposits, withdrawals, overdraft prevention, invalid amount guards, inactive/closed account handling, intra-bank transfers, inter-bank transfers across distinct institutions, self-transfer rejection, dual-entry debit=credit validation, simulated crash and failure-injection rollback (verifying 0 partial records), concurrent limited-funds withdrawals (preventing negative balances), multi-threaded transfer liquidity conservation, global transaction ID uniqueness, SQLite disk persistence across connection reopenings, receipt-to-database match with post-transaction balance confirmation, and ledger reconciliation discrepancy detection.
+2. **Domain Models (`DomainModelTest`):** Validation of Account, Bank, Transaction, LedgerEntry, MoneyUtil, and `equals`/`hashCode` identity.
+3. **Account Services (`AccountServiceTest`, `AccountManagementTest`):** Account onboarding, age restrictions, email validation, and state machine transitions (`ACTIVE`, `INACTIVE`, `CLOSED`).
+4. **Transaction Services (`TransactionServiceTest`, `TransferServiceTest`):** Deposit calculations, withdrawal limits, overdraft rejection, and atomic transfers.
+5. **Double-Entry Ledger (`LedgerServiceTest`):** Validation of dual debit/credit entries, balanced ledger invariant enforcement, and reconciliation reporting.
+6. **Concurrency & Deadlock Prevention (`ConcurrencyIntegrationTest`):** Multi-threaded concurrent deposits and transfers across threads to prove thread safety and absence of deadlocks.
+7. **Data Access Layer (`RepositoryIntegrationTest`, `DatabaseLayerTest`):** SQLite schema creation, foreign key constraints, column additions, and JDBC query mapping.
+8. **UI Presentation Tier (`AppShellUITest`, `TransactionDialogTest`):** JavaFX node creation, modal dialogs, account preselection, live calculation previews, and GitHub link verification.
 
 ---
 

@@ -32,6 +32,30 @@ public final class TransactionServiceImpl implements TransactionService {
     private final LedgerService ledgerService;
     private final AccountLockManager lockManager;
 
+    public enum FailurePoint {
+        AFTER_BALANCE_UPDATE,
+        AFTER_TRANSACTION_SAVE,
+        AFTER_LEDGER_SAVE
+    }
+
+    @FunctionalInterface
+    public interface FailureInjector {
+        void inject(FailurePoint point, Transaction transaction);
+    }
+
+    private volatile FailureInjector failureInjector;
+
+    public void setFailureInjector(FailureInjector failureInjector) {
+        this.failureInjector = failureInjector;
+    }
+
+    private void triggerFailure(FailurePoint point, Transaction transaction) {
+        FailureInjector injector = this.failureInjector;
+        if (injector != null) {
+            injector.inject(point, transaction);
+        }
+    }
+
     public TransactionServiceImpl(Connection connection, AccountService accountService) {
         this(connection, accountService, new AccountRepository(connection), new TransactionRepository(connection),
             new LedgerServiceImpl(new LedgerRepository(connection), new TransactionRepository(connection)),
@@ -136,12 +160,18 @@ public final class TransactionServiceImpl implements TransactionService {
         try (DatabaseTransaction databaseTransaction = new DatabaseTransaction(connection)) {
             try {
                 accountRepository.updateBalance(accountId, newBalance);
+                triggerFailure(FailurePoint.AFTER_BALANCE_UPDATE, transaction);
+
                 transactionRepository.save(transaction);
+                triggerFailure(FailurePoint.AFTER_TRANSACTION_SAVE, transaction);
+
                 if (transaction.getTransactionType() == TransactionType.DEPOSIT) {
                     ledgerService.saveEntries(ledgerService.createDepositEntries(transaction));
                 } else {
                     ledgerService.saveEntries(ledgerService.createWithdrawalEntries(transaction));
                 }
+                triggerFailure(FailurePoint.AFTER_LEDGER_SAVE, transaction);
+
                 ledgerService.validateBalancedTransaction(transaction.getTransactionId());
                 databaseTransaction.commit();
                 return transaction;
@@ -166,8 +196,14 @@ public final class TransactionServiceImpl implements TransactionService {
             try {
                 accountRepository.updateBalance(transaction.getFromAccount(), sourceBalance);
                 accountRepository.updateBalance(transaction.getToAccount(), destinationBalance);
+                triggerFailure(FailurePoint.AFTER_BALANCE_UPDATE, transaction);
+
                 transactionRepository.save(transaction);
+                triggerFailure(FailurePoint.AFTER_TRANSACTION_SAVE, transaction);
+
                 ledgerService.saveEntries(ledgerService.createTransferEntries(transaction));
+                triggerFailure(FailurePoint.AFTER_LEDGER_SAVE, transaction);
+
                 ledgerService.validateBalancedTransaction(transaction.getTransactionId());
                 databaseTransaction.commit();
                 return transaction;

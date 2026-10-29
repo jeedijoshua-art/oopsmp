@@ -320,5 +320,10 @@ class TransferServiceTest {
         public BigDecimal totalCredits(String transactionId) {
             return delegate.totalCredits(transactionId);
         }
+
+        @Override
+        public com.corebanking.model.ReconciliationReport generateReconciliationReport(List<Account> accounts, java.util.function.Function<Long, String> bankNameLookup) {
+            return delegate.generateReconciliationReport(accounts, bankNameLookup);
+        }
     }
 }
